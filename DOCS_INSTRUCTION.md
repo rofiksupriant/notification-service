@@ -50,3 +50,8 @@ Implement these tables using JPA Entities:
 - **New Version for Changes**: Any changes to the schema (adding columns, changing constraints, or new tables) MUST be done by creating a new migration file with an incremented version number (e.g., `V2__add_new_column.sql`).
 - **Naming Convention**: Use `V<Version>__<Description>.sql` (double underscore).
 - **No Overwrites**: If an error occurs in a migration, do not fix the file; create a new migration to repair it (Roll-forward).
+
+## 🛠 Execution Rules
+- **Java Version**: The environment uses multiple Java versions.
+- **Mandatory Command**: ALWAYS run `Set-JavaVersion 25` before any `mvn` command.
+- **Example**: `Set-JavaVersion 25; mvn spring-boot:run`
