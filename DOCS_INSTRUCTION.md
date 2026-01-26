@@ -44,3 +44,9 @@ Implement these tables using JPA Entities:
 - Use **MDC** to carry `trace_id` in application logs.
 - Use **TDD**: Write a test case for the template rendering and fallback logic first.
 - Provide a `/actuator/health` endpoint that checks DB and Mail status.
+
+## 🗄️ DATABASE MIGRATION RULES (FLYWAY)
+- **Immutable Migrations**: Never modify an existing migration file (e.g., `V1__...`) once it has been created.
+- **New Version for Changes**: Any changes to the schema (adding columns, changing constraints, or new tables) MUST be done by creating a new migration file with an incremented version number (e.g., `V2__add_new_column.sql`).
+- **Naming Convention**: Use `V<Version>__<Description>.sql` (double underscore).
+- **No Overwrites**: If an error occurs in a migration, do not fix the file; create a new migration to repair it (Roll-forward).

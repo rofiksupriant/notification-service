@@ -34,4 +34,10 @@ spring:
 
   flyway:
     enabled: false
-    com.vibe.notification: DEBUG
+
+api:
+  key:
+    secret: test-api-key
+
+logging:
+  level:

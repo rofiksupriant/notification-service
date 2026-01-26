@@ -2,6 +2,8 @@ package com.vibe.notification.presentation.error;
 
 import com.vibe.notification.domain.exception.NotificationException;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
+import com.vibe.notification.domain.exception.TemplateValidationException;
+import com.vibe.notification.domain.exception.TemplateAlreadyExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleTemplateNotFound(TemplateNotFoundException ex) {
         logger.warn("Template not found: {}", ex.getMessage());
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(TemplateValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleTemplateValidation(TemplateValidationException ex) {
+        logger.warn("Template validation failed: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(TemplateAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handleTemplateAlreadyExists(TemplateAlreadyExistsException ex) {
+        logger.warn("Template already exists: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(NotificationException.class)
