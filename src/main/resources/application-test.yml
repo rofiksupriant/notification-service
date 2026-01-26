@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: notification-service
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    hikari:
+      maximum-pool-size: 2
+  
+  h2:
+    console:
+      enabled: true
+  
+  mail:
+    host: localhost
+    port: 3025
+    username: test@test.com
+    password: test
+    properties:
+      mail.smtp.auth: false
+
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 2
+
+  flyway:
+    enabled: false
+    com.vibe.notification: DEBUG

@@ -1,0 +1,49 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build
+target/
+build/
+*.class
+*.jar
+*.war
+
+# Maven
+.m2/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+*.gz
+
+# Database
+*.db
+*.sqlite
+
+# Test coverage
+.jacoco/
+coverage/
+
+# Gradle
+.gradle/
+gradle/
+
+# Node (if used)
+node_modules/
+npm-debug.log
+
+**/application.yml
