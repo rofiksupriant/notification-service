@@ -57,12 +57,14 @@ public class NotificationRequestListener {
             validateMessage(message);
 
             // Convert to application request and process
+            // Use message's trace_id as idempotency key
             SendNotificationRequest request = new SendNotificationRequest(
                 message.recipient(),
                 message.slug(),
                 message.language(),
                 message.channel(),
-                message.variables()
+                message.variables(),
+                java.util.Optional.of(message.traceId())
             );
 
             // Send notification asynchronously
