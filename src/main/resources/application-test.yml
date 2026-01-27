@@ -20,11 +20,12 @@ spring:
   
   mail:
     host: localhost
-    port: 3025
-    username: test@test.com
-    password: test
+    port: 1025
+    username: ""
+    password: ""
     properties:
       mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
 
   task:
     execution:
@@ -34,6 +35,11 @@ spring:
 
   flyway:
     enabled: false
+
+app:
+  feature:
+    rabbitmq:
+      enabled: true
 
 api:
   key:

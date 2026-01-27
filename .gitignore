@@ -47,3 +47,5 @@ node_modules/
 npm-debug.log
 
 **/application.yml
+
+.ignore/

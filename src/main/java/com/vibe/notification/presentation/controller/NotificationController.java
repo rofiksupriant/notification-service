@@ -4,6 +4,7 @@ import com.vibe.notification.application.NotificationApplicationService;
 import com.vibe.notification.application.dto.SendNotificationRequest;
 import com.vibe.notification.application.dto.NotificationResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 /**
  * REST Controller for Notification API
@@ -37,7 +40,8 @@ public class NotificationController {
     @Operation(summary = "Send a notification", 
                description = "Sends a notification (WhatsApp or Email) to the specified recipient with the given template and parameters. " +
                        "The request is processed asynchronously and returns immediately with a tracking ID. " +
-                       "Variable substitution is performed using the provided variables map. All values in the map are converted to strings.")
+                       "Variable substitution is performed using the provided variables map. " +
+                       "Supports optional Idempotency-Key header for idempotent request processing - if provided, ensures the request is processed only once.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "202", description = "Notification accepted for processing - Use the returned notification ID to track status",
                      content = @Content(schema = @Schema(implementation = NotificationResponse.class))),
@@ -45,9 +49,22 @@ public class NotificationController {
         @ApiResponse(responseCode = "422", description = "Unprocessable Entity - Template not found, validation failed, or recipient format is invalid")
     })
     public ResponseEntity<NotificationResponse> sendNotification(
-        @org.springframework.web.bind.annotation.RequestBody SendNotificationRequest request) {
+        @RequestBody SendNotificationRequest request,
+        @Parameter(name = "Idempotency-Key", description = "Optional unique identifier for idempotent request processing. If provided, ensures the request is processed only once.")
+        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         logger.info("Received notification request: {}", request.recipient());
-        var response = notificationApplicationService.sendNotification(request);
+        
+        // Create a new request with idempotency key if provided
+        SendNotificationRequest enrichedRequest = new SendNotificationRequest(
+            request.recipient(),
+            request.slug(),
+            request.language(),
+            request.channel(),
+            request.variables(),
+            Optional.ofNullable(idempotencyKey)
+        );
+        
+        var response = notificationApplicationService.sendNotification(enrichedRequest);
         return ResponseEntity.accepted().body(response);
     }
 
@@ -68,4 +85,3 @@ public class NotificationController {
         return ResponseEntity.ok("Notification Service is healthy");
     }
 }
-

@@ -56,3 +56,8 @@ Implement these tables using JPA Entities:
 - **Java Version**: The environment uses multiple Java versions.
 - **Mandatory Command**: ALWAYS run `Set-JavaVersion 25` before any `mvn` command.
 - **Example**: `Set-JavaVersion 25; mvn spring-boot:run`
+
+### 📂 File Handling & Testing
+- **Output Files**: Jika membutuhkan file output untuk keperluan testing, logging sementara, atau export data, **WAJIB** diletakkan di dalam folder yang sudah di-ignore (misal: `target/`, `build/`, atau folder khusus `.ignore/`).
+- **Forbidden**: Jangan pernah membuat file output di root folder atau folder source code (`src/`).
+- **Cleanup**: Pastikan file test tidak mengotori workspace utama.

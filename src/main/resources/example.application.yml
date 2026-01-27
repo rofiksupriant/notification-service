@@ -49,6 +49,32 @@ spring:
       pool:
         size: 2
 
+# RabbitMQ Configuration for Asynchronous Message Processing
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    connection-timeout: 10000
+    listener:
+      simple:
+        concurrency: 3
+        max-concurrency: 10
+        prefetch: 1
+        auto-startup: true
+        acknowledge-mode: AUTO
+
+api:
+  key:
+    secret: ${API_KEY_SECRET}
+
+# Feature Toggles
+app:
+  feature:
+    rabbitmq:
+      enabled: ${RABBITMQ_ENABLED:false}
+
 watzap:
   api-key: ${WATZAP_API_KEY}
   number-key: ${WATZAP_NUMBER_KEY}

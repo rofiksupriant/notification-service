@@ -153,7 +153,60 @@ Indexes on: `trace_id`, `recipient`, `status`, `created_at`
 6. Logs are indexed by trace_id for correlation
 ```
 
-## 🏃 Running the Service
+## 📚 Documentation
+
+### Getting Started
+- **[QUICKSTART.md](QUICKSTART.md)** - 5-minute setup guide
+- **[API_GUIDE.md](API_GUIDE.md)** - Complete API documentation with examples
+- **[API_QUICK_REFERENCE.md](API_QUICK_REFERENCE.md)** - Quick reference with common commands
+
+### Complete Documentation
+- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Detailed project layout
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details
+- **[Swagger UI](http://localhost:8080/swagger-ui.html)** - Interactive API documentation
+
+---
+
+## 🚀 Quick Start
+
+### Send Notification via HTTP API
+```bash
+curl -X POST http://localhost:8080/api/v1/notifications/send \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "recipient": "+6281234567890",
+    "slug": "welcome",
+    "language": "en",
+    "channel": "whatsapp",
+    "variables": {"userName": "John Doe"}
+  }'
+```
+
+### Send Notification via RabbitMQ
+```python
+import pika, json, uuid
+
+conn = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+ch = conn.channel()
+msg = {
+    "traceId": str(uuid.uuid4()),
+    "recipient": "+6281234567890",
+    "slug": "welcome",
+    "language": "en",
+    "channel": "whatsapp",
+    "variables": {"userName": "John Doe"}
+}
+ch.basic_publish(exchange='', routing_key='notification.request.queue',
+    body=json.dumps(msg), properties=pika.BasicProperties(content_type='application/json'))
+conn.close()
+```
+
+See [API_GUIDE.md](API_GUIDE.md) for complete examples in Python, Node.js, Java, Go, and more.
+
+---
+
+
 
 ### Prerequisites
 ```bash

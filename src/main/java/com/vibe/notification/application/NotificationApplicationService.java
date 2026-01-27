@@ -7,6 +7,8 @@ import com.vibe.notification.domain.model.NotificationRequest;
 import com.vibe.notification.domain.service.TraceService;
 import com.vibe.notification.infrastructure.adapter.email.EmailNotificationAdapter;
 import com.vibe.notification.infrastructure.adapter.whatsapp.WhatsAppNotificationAdapter;
+import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
+import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessage;
 import com.vibe.notification.domain.service.NotificationDomainService;
 import com.vibe.notification.domain.service.TemplateResolutionService;
 import com.vibe.notification.domain.service.TemplateRenderingService;
@@ -17,7 +19,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Application service for notification processing orchestration
- * Handles the complete flow: request -> trace -> render -> send -> audit
+ * Handles the complete flow: request -> idempotency check -> trace -> render -> send -> audit
  */
 @Service
 public class NotificationApplicationService {
@@ -29,6 +31,7 @@ public class NotificationApplicationService {
     private final TemplateRenderingService templateRenderingService;
     private final EmailNotificationAdapter emailNotificationAdapter;
     private final WhatsAppNotificationAdapter whatsAppNotificationAdapter;
+    private final ProcessedMessageRepository processedMessageRepository;
 
     public NotificationApplicationService(
         TraceService traceService,
@@ -36,23 +39,50 @@ public class NotificationApplicationService {
         TemplateResolutionService templateResolutionService,
         TemplateRenderingService templateRenderingService,
         EmailNotificationAdapter emailNotificationAdapter,
-        WhatsAppNotificationAdapter whatsAppNotificationAdapter) {
+        WhatsAppNotificationAdapter whatsAppNotificationAdapter,
+        ProcessedMessageRepository processedMessageRepository) {
         this.traceService = traceService;
         this.notificationDomainService = notificationDomainService;
         this.templateResolutionService = templateResolutionService;
         this.templateRenderingService = templateRenderingService;
         this.emailNotificationAdapter = emailNotificationAdapter;
         this.whatsAppNotificationAdapter = whatsAppNotificationAdapter;
+        this.processedMessageRepository = processedMessageRepository;
     }
 
     /**
      * Send notification (synchronously returns response with trace_id)
-     * Actual delivery happens asynchronously
+     * Actual delivery happens asynchronously.
+     * 
+     * Supports idempotent processing: if request.traceId() is provided, checks if already processed.
+     * If not provided, generates a new trace ID internally.
      */
     public NotificationResponse sendNotification(SendNotificationRequest request) {
         logger.info("Processing notification request: recipient={}, slug={}", request.recipient(), request.slug());
 
-        var traceId = traceService.generateTraceId();
+        // Check idempotency if client provided a trace ID
+        String clientTraceIdStr = null;
+        if (request.traceId().isPresent()) {
+            clientTraceIdStr = request.traceId().get();
+            
+            // Check if this request was already processed
+            if (isMessageAlreadyProcessed(clientTraceIdStr)) {
+                logger.debug("Request with traceId {} already processed, skipping", clientTraceIdStr);
+                // Return a response indicating it was already processed
+                return new NotificationResponse(
+                    null,
+                    clientTraceIdStr,
+                    "ALREADY_PROCESSED",
+                    "This request was already processed"
+                );
+            }
+            
+            // Mark as processed before creating log (for idempotency)
+            markMessageAsProcessed(clientTraceIdStr);
+        }
+
+        // Generate internal trace ID for logging
+        var internalTraceId = traceService.generateTraceId();
         var channel = Channel.from(request.channel());
         
         var notificationRequest = new NotificationRequest(
@@ -63,18 +93,37 @@ public class NotificationApplicationService {
             request.variables()
         );
 
-        // Create pending log entry
-        var logEntity = notificationDomainService.createPendingLog(notificationRequest, traceId);
+        // Create pending log entry with internal trace ID
+        var logEntity = notificationDomainService.createPendingLog(notificationRequest, internalTraceId);
 
         // Execute async processing
         processNotificationAsync(logEntity.getId(), notificationRequest);
 
         return new NotificationResponse(
             logEntity.getId(),
-            traceId,
+            internalTraceId.toString(),
             "PENDING",
             "Notification queued for processing"
         );
+    }
+
+    /**
+     * Checks if a message with the given trace_id has already been processed.
+     *
+     * @param traceId the unique message identifier
+     * @return true if the message was previously processed, false otherwise
+     */
+    private boolean isMessageAlreadyProcessed(String traceId) {
+        return processedMessageRepository.existsById(traceId);
+    }
+
+    /**
+     * Records that a message has been successfully processed.
+     *
+     * @param traceId the unique message identifier
+     */
+    private void markMessageAsProcessed(String traceId) {
+        processedMessageRepository.save(new ProcessedMessage(traceId));
     }
 
     /**

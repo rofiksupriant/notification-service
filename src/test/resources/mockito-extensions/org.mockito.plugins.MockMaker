@@ -1,3 +1,4 @@
-# Mockito configuration for Java 25 compatibility
-# Using subclass mock maker to avoid inline bytecode manipulation issues
-org.mockito.internal.creation.cglib.CglibMockMaker
+# Mockito configuration for Java 21+ compatibility
+# Using inline mock maker (requires byte-buddy-agent)
+org.mockito.internal.creation.InlineByteBuddyMockMaker
+
