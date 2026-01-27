@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.thymeleaf.spring6.SpringTemplateEngine;
 
 /**
  * Adapter service for template management operations
@@ -23,13 +22,9 @@ public class TemplateManagementAdapter {
     private static final Logger logger = LoggerFactory.getLogger(TemplateManagementAdapter.class);
 
     private final NotificationTemplateRepository templateRepository;
-    private final SpringTemplateEngine templateEngine;
 
-    public TemplateManagementAdapter(
-        NotificationTemplateRepository templateRepository,
-        SpringTemplateEngine templateEngine) {
+    public TemplateManagementAdapter(NotificationTemplateRepository templateRepository) {
         this.templateRepository = templateRepository;
-        this.templateEngine = templateEngine;
     }
 
     /**
