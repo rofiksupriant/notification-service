@@ -35,6 +35,12 @@ spring:
   flyway:
     enabled: false
 
+# Disable RabbitMQ for test profile - tests use TestContainers
+app:
+  feature:
+    rabbitmq:
+      enabled: false
+
 api:
   key:
     secret: test-api-key
