@@ -59,7 +59,7 @@ public class NotificationRequestListener {
             // Convert to application request and process
             SendNotificationRequest request = new SendNotificationRequest(
                 message.recipient(),
-                message.templateSlug(),
+                message.slug(),
                 message.language(),
                 message.channel(),
                 message.variables()
@@ -72,7 +72,7 @@ public class NotificationRequestListener {
             markMessageAsProcessed(message.traceId());
 
             logger.info("Notification request processed successfully. Trace ID: {}, Recipient: {}, Template: {}",
-                message.traceId(), message.recipient(), message.templateSlug());
+                message.traceId(), message.recipient(), message.slug());
 
         } catch (IllegalArgumentException e) {
             logger.error("Validation error processing message with trace_id {}: {}", message.traceId(), e.getMessage(), e);
@@ -114,8 +114,8 @@ public class NotificationRequestListener {
         if (message.recipient() == null || message.recipient().isBlank()) {
             throw new IllegalArgumentException("recipient is required");
         }
-        if (message.templateSlug() == null || message.templateSlug().isBlank()) {
-            throw new IllegalArgumentException("template_slug is required");
+        if (message.slug() == null || message.slug().isBlank()) {
+            throw new IllegalArgumentException("slug is required");
         }
         if (message.language() == null || message.language().isBlank()) {
             throw new IllegalArgumentException("language is required");
