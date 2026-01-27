@@ -12,6 +12,7 @@ Build a high-performance, asynchronous **Notification Service** to centralize Wh
 - **Template Engine**: Thymeleaf (String Template Resolver for DB-based templates).
 - **Reliability**: Asynchronous processing (@Async) & Task Tracing.
 - **Testing**: TDD approach with JUnit 5 and Testcontainers (PostgreSQL).
+- **Documentation**: SpringDoc OpenAPI 3 (Swagger UI) with SecurityScheme configuration for API Key.
 
 ## 🗄️ DATABASE SCHEMA (PostgreSQL)
 Implement these tables using JPA Entities:

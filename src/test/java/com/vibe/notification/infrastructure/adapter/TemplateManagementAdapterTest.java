@@ -1,7 +1,6 @@
 package com.vibe.notification.infrastructure.adapter;
 
 import com.vibe.notification.application.dto.CreateTemplateRequest;
-import com.vibe.notification.application.dto.TemplateResponse;
 import com.vibe.notification.application.dto.UpdateTemplateRequest;
 import com.vibe.notification.domain.exception.TemplateAlreadyExistsException;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
@@ -18,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;

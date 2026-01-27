@@ -82,7 +82,6 @@ public class NotificationApplicationService {
      */
     @Async
     public void processNotificationAsync(java.util.UUID logId, NotificationRequest request) {
-        var traceId = traceService.generateTraceId();
         try {
             logger.info("Starting async notification processing: logId={}", logId);
 
