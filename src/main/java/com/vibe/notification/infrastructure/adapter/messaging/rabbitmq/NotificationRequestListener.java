@@ -61,7 +61,7 @@ public class NotificationRequestListener {
                 message.recipient(),
                 message.templateSlug(),
                 message.language(),
-                "whatsapp", // Default channel from RabbitMQ messages
+                message.channel(),
                 message.variables()
             );
 
@@ -119,6 +119,9 @@ public class NotificationRequestListener {
         }
         if (message.language() == null || message.language().isBlank()) {
             throw new IllegalArgumentException("language is required");
+        }
+        if (message.channel() == null || message.channel().isBlank()) {
+            throw new IllegalArgumentException("channel is required");
         }
         if (message.variables() == null) {
             throw new IllegalArgumentException("variables map is required");

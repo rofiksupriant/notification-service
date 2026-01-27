@@ -10,6 +10,7 @@ import java.util.Map;
  * @param recipient the message recipient (phone number for WhatsApp, email address for Email)
  * @param templateSlug the unique identifier of the template to use for rendering
  * @param language the ISO 639-1 language code (e.g., "en", "id", "es")
+ * @param channel the notification channel (e.g., "whatsapp", "email")
  * @param variables a map of template variables to be interpolated into the template content
  */
 public record NotificationRequestMessage(
@@ -17,6 +18,7 @@ public record NotificationRequestMessage(
     String recipient,
     String templateSlug,
     String language,
+    String channel,
     Map<String, Object> variables
 ) {
 }
