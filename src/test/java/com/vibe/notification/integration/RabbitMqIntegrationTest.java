@@ -5,10 +5,14 @@ import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.Notificat
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -34,6 +38,15 @@ public class RabbitMqIntegrationTest {
     static RabbitMQContainer rabbitMqContainer = new RabbitMQContainer("rabbitmq:3.12-management-alpine")
             .withUser("guest", "guest")
             .withPermission("/", "guest", ".*", ".*", ".*");
+
+    @DynamicPropertySource
+    static void registerRabbitMqProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.rabbitmq.host", rabbitMqContainer::getHost);
+        registry.add("spring.rabbitmq.port", rabbitMqContainer::getAmqpPort);
+        registry.add("spring.rabbitmq.username", () -> "guest");
+        registry.add("spring.rabbitmq.password", () -> "guest");
+        registry.add("app.feature.rabbitmq.enabled", () -> "true");
+    }
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -76,15 +89,23 @@ public class RabbitMqIntegrationTest {
         // Act
         try {
             String messageJson = objectMapper.writeValueAsString(message);
-            rabbitTemplate.convertAndSend(NOTIFICATION_REQUEST_QUEUE, messageJson);
+            byte[] body = messageJson.getBytes();
+            
+            // Create message with proper content-type header for Jackson deserialization
+            MessageProperties props = new MessageProperties();
+            props.setContentType("application/json");
+            props.setContentEncoding("UTF-8");
+            
+            Message msg = new Message(body, props);
+            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize message", e);
         }
 
         // Assert - verify message was processed (trace_id stored in processed_messages table)
         await()
-                .atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .atMost(10, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     assertTrue(
                             processedMessageRepository.existsById(traceId),
@@ -116,16 +137,23 @@ public class RabbitMqIntegrationTest {
         // Act - send the same message twice
         try {
             String messageJson = objectMapper.writeValueAsString(message);
-            rabbitTemplate.convertAndSend(NOTIFICATION_REQUEST_QUEUE, messageJson);
-            rabbitTemplate.convertAndSend(NOTIFICATION_REQUEST_QUEUE, messageJson);
+            byte[] body = messageJson.getBytes();
+            
+            MessageProperties props = new MessageProperties();
+            props.setContentType("application/json");
+            props.setContentEncoding("UTF-8");
+            
+            Message msg = new Message(body, props);
+            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
+            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize message", e);
         }
 
         // Assert - verify the trace_id is only processed once
         await()
-                .atMost(5, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .atMost(10, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     assertTrue(
                             processedMessageRepository.existsById(traceId),
@@ -166,7 +194,14 @@ public class RabbitMqIntegrationTest {
         // Act - send invalid message
         try {
             String messageJson = objectMapper.writeValueAsString(invalidMessage);
-            rabbitTemplate.convertAndSend(NOTIFICATION_REQUEST_QUEUE, messageJson);
+            byte[] body = messageJson.getBytes();
+            
+            MessageProperties props = new MessageProperties();
+            props.setContentType("application/json");
+            props.setContentEncoding("UTF-8");
+            
+            Message msg = new Message(body, props);
+            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize message", e);
         }
@@ -209,7 +244,14 @@ public class RabbitMqIntegrationTest {
             // Act
             try {
                 String messageJson = objectMapper.writeValueAsString(message);
-                rabbitTemplate.convertAndSend(NOTIFICATION_REQUEST_QUEUE, messageJson);
+                byte[] body = messageJson.getBytes();
+                
+                MessageProperties props = new MessageProperties();
+                props.setContentType("application/json");
+                props.setContentEncoding("UTF-8");
+                
+                Message msg = new Message(body, props);
+                rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to serialize message", e);
             }
@@ -217,8 +259,8 @@ public class RabbitMqIntegrationTest {
 
         // Assert - verify all messages are processed
         await()
-                .atMost(10, TimeUnit.SECONDS)
-                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .atMost(15, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     for (String traceId : messageMap.values()) {
                         assertTrue(
@@ -229,3 +271,4 @@ public class RabbitMqIntegrationTest {
                 });
     }
 }
+

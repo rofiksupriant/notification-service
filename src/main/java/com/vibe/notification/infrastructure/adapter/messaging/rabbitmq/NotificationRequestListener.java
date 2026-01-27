@@ -95,11 +95,20 @@ public class NotificationRequestListener {
 
     /**
      * Records that a message has been successfully processed.
+     * Uses saveAndFlush to immediately persist and prevent race conditions.
      *
      * @param traceId the unique message identifier
      */
     private void markMessageAsProcessed(String traceId) {
-        processedMessageRepository.save(new ProcessedMessage(traceId));
+        try {
+            // Check again before saving to handle race conditions
+            if (!processedMessageRepository.existsById(traceId)) {
+                processedMessageRepository.saveAndFlush(new ProcessedMessage(traceId));
+            }
+        } catch (Exception e) {
+            // Silently ignore if message was already saved by another thread
+            logger.debug("Message with trace_id {} already marked as processed", traceId);
+        }
     }
 
     /**

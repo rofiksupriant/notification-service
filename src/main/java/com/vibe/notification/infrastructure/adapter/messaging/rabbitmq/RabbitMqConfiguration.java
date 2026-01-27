@@ -1,9 +1,12 @@
 package com.vibe.notification.infrastructure.adapter.messaging.rabbitmq;
 
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * RabbitMQ configuration for inbound notification requests.
@@ -29,5 +32,16 @@ public class RabbitMqConfiguration {
     @Bean
     public Queue notificationRequestQueue() {
         return new Queue(NOTIFICATION_REQUEST_QUEUE, true);
+    }
+
+    /**
+     * Configures the message converter for JSON deserialization.
+     * Enables automatic conversion of JSON messages to Java objects (records).
+     *
+     * @return Jackson2 message converter bean
+     */
+    @Bean
+    public MessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }
