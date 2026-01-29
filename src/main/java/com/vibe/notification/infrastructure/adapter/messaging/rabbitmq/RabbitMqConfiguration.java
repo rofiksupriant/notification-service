@@ -3,7 +3,7 @@ package com.vibe.notification.infrastructure.adapter.messaging.rabbitmq;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,11 +13,6 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * RabbitMQ configuration for inbound notification requests with retry mechanism and DLQ support.
@@ -86,11 +81,9 @@ public class RabbitMqConfiguration {
      */
     @Bean
     public Queue notificationRequestQueue() {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", NOTIFICATION_DLX);
-        args.put("x-dead-letter-routing-key", NOTIFICATION_REQUEST_QUEUE);
         return QueueBuilder.durable(NOTIFICATION_REQUEST_QUEUE)
-                .withArguments(args)
+                .withArgument("x-dead-letter-exchange", NOTIFICATION_DLX)
+                .withArgument("x-dead-letter-routing-key", NOTIFICATION_REQUEST_QUEUE)
                 .build();
     }
 
@@ -115,13 +108,25 @@ public class RabbitMqConfiguration {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
-            MessageConverter messageConverter) {
+            MessageConverter messageConverter,
+            RabbitTemplate rabbitTemplate) {
         
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
         
-        // Configure retry template with exponential backoff
+        // Configure retry interceptor
+        factory.setAdviceChain(retryInterceptor(rabbitTemplate));
+        
+        return factory;
+    }
+
+    /**
+     * Creates a retry interceptor with exponential backoff policy.
+     *
+     * @return the configured retry interceptor
+     */
+    private org.aopalliance.intercept.MethodInterceptor retryInterceptor(RabbitTemplate rabbitTemplate) {
         RetryTemplate retryTemplate = new RetryTemplate();
         
         // Exponential backoff: 1s, 2s, 4s
@@ -131,27 +136,24 @@ public class RabbitMqConfiguration {
         backOffPolicy.setMaxInterval(4000L);       // Max 4 seconds
         retryTemplate.setBackOffPolicy(backOffPolicy);
         
-        // Max 3 retry attempts (initial + 2 retries)
-        Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
-        retryableExceptions.put(Exception.class, true);
-        // Don't retry client errors (4xx)
-        retryableExceptions.put(AmqpRejectAndDontRequeueException.class, false);
-        
-        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(3, retryableExceptions);
+        // Max 3 attempts total (1 initial + 2 retries)
+        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy();
+        retryPolicy.setMaxAttempts(3);
         retryTemplate.setRetryPolicy(retryPolicy);
         
-        // When retries are exhausted, reject and don't requeue (send to DLQ)
-        factory.setAdviceChain(
-            new org.springframework.amqp.rabbit.config.StatelessRetryOperationsInterceptorFactoryBean()
-                .getObject()
+        // Custom message recoverer that adds error headers to DLQ messages
+        DlqMessageRecoverer messageRecoverer = new DlqMessageRecoverer(
+            rabbitTemplate,
+            NOTIFICATION_DLX,
+            NOTIFICATION_REQUEST_QUEUE,
+            NOTIFICATION_REQUEST_QUEUE
         );
         
-        factory.setRetryTemplate(retryTemplate);
-        factory.setRecoveryCallback(context -> {
-            // This will be called after max retries, message goes to DLQ
-            return null;
-        });
-        
-        return factory;
+        return org.springframework.amqp.rabbit.config.RetryInterceptorBuilder
+                .stateless()
+                .retryOperations(retryTemplate)
+                .recoverer(messageRecoverer)
+                .build();
     }
 }
+

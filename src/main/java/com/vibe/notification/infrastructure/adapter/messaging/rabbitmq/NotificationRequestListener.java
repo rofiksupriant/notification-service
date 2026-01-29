@@ -44,10 +44,7 @@ public class NotificationRequestListener {
      *
      * @param message the notification request message containing recipient, template slug, language, and variables
      */
-    @RabbitListener(
-        queues = RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE,
-        errorHandler = "notificationErrorHandler"
-    )
+    @RabbitListener(queues = RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE)
     public void handleNotificationRequest(NotificationRequestMessage message) {
         // Check if message has already been processed using trace_id
         if (isMessageAlreadyProcessed(message.traceId())) {
