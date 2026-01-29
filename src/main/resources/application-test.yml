@@ -47,3 +47,5 @@ api:
 
 logging:
   level:
+    root: INFO
+    com.vibe.notification: DEBUG
