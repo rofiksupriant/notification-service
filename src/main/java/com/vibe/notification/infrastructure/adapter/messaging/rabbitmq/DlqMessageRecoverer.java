@@ -34,7 +34,9 @@ public class DlqMessageRecoverer implements MessageRecoverer {
     public void recover(Message message, Throwable cause) {
         // Add custom headers
         MessageProperties properties = message.getMessageProperties();
-        String errorMessage = cause != null ? cause.getMessage() : "Unknown error";
+        String errorMessage = (cause != null && cause.getMessage() != null) 
+            ? cause.getMessage() 
+            : "Unknown error";
         properties.setHeader("x-last-error", errorMessage);
         properties.setHeader("x-last-error-timestamp", System.currentTimeMillis());
         properties.setHeader("x-original-queue", originalQueue);

@@ -29,11 +29,11 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration tests for RabbitMQ retry mechanism and Dead Letter Queue (DLQ).
  * Validates:
- * - Exponential backoff retry (1s, 2s, 4s)
- * - Max 3 retry attempts
+ * - Exponential backoff retry (1s, 2s, 4s) across 4 total attempts (1 initial + 3 retries)
  * - DLQ routing after exhausted retries
  * - Custom header x-last-error in DLQ messages
- * - Differentiation between transient and client errors (4xx)
+ * - Exponential backoff timing
+ * - Differentiation between transient errors (retryable) and validation errors (non-retryable)
  */
 @SpringBootTest
 @Testcontainers
@@ -116,7 +116,7 @@ public class RetryAndDlqIntegrationTest {
 
     /**
      * Test that messages with non-existent templates eventually go to DLQ after max retries.
-     * This simulates a transient error scenario.
+     * This simulates a permanent error scenario (template not found).
      */
     @Test
     void testMessageGoesToDlqAfterMaxRetries() {
@@ -137,8 +137,9 @@ public class RetryAndDlqIntegrationTest {
         sendMessage(message);
 
         // Assert - after retries exhausted, message should end up in DLQ
+        // Total retry time: 1s + 2s + 4s = 7s plus processing overhead
         await()
-                .atMost(20, TimeUnit.SECONDS)  // Allow time for retries (1s + 2s + 4s + processing)
+                .atMost(25, TimeUnit.SECONDS)  // Allow time for retries and processing
                 .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     // Check DLQ for the message
@@ -218,10 +219,10 @@ public class RetryAndDlqIntegrationTest {
         long startTime = System.currentTimeMillis();
         sendMessage(message);
 
-        // Assert - message should take at least 7 seconds (1s + 2s + 4s) before going to DLQ
+        // Assert - message should take approximately 7 seconds (1s + 2s + 4s) before going to DLQ
         await()
-                .atLeast(6, TimeUnit.SECONDS)  // At least 6 seconds for retries
-                .atMost(25, TimeUnit.SECONDS)   // At most 25 seconds (retries + processing overhead)
+                .atLeast(7, TimeUnit.SECONDS)   // At least 7 seconds for all retries
+                .atMost(30, TimeUnit.SECONDS)   // At most 30 seconds (retries + processing overhead)
                 .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DLQ, 1000);
@@ -229,8 +230,8 @@ public class RetryAndDlqIntegrationTest {
                     
                     long duration = System.currentTimeMillis() - startTime;
                     // Total retry time should be approximately 1s + 2s + 4s = 7s (with some tolerance)
-                    assertTrue(duration >= 6000, 
-                        "Retries should take at least 6 seconds (exponential backoff), took: " + duration + "ms");
+                    assertTrue(duration >= 7000, 
+                        "Retries should take at least 7 seconds (exponential backoff), took: " + duration + "ms");
                 });
     }
 

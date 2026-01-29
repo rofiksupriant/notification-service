@@ -46,14 +46,21 @@ public class NotificationRequestListener {
      */
     @RabbitListener(queues = RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE)
     public void handleNotificationRequest(NotificationRequestMessage message) {
+        try {
+            // Validate incoming message (validation errors should not be retried)
+            validateMessage(message);
+        } catch (IllegalArgumentException e) {
+            // Validation errors are client errors - log and skip retry
+            logger.error("Validation error processing message with trace_id {}: {}", message.traceId(), e.getMessage());
+            throw new org.springframework.amqp.AmqpRejectAndDontRequeueException(
+                "Validation failed: " + e.getMessage(), e);
+        }
+        
         // Check if message has already been processed using trace_id
         if (isMessageAlreadyProcessed(message.traceId())) {
             logger.debug("Message with trace_id {} already processed, skipping", message.traceId());
             return;
         }
-
-        // Validate incoming message
-        validateMessage(message);
 
         // Convert to application request and process
         // Use message's trace_id as idempotency key
