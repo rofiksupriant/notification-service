@@ -47,40 +47,40 @@ public class NotificationRequestListener {
     @RabbitListener(queues = RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE)
     public void handleNotificationRequest(NotificationRequestMessage message) {
         try {
-            // Check if message has already been processed using trace_id
-            if (isMessageAlreadyProcessed(message.traceId())) {
-                logger.debug("Message with trace_id {} already processed, skipping", message.traceId());
-                return;
-            }
-
-            // Validate incoming message
+            // Validate incoming message (validation errors should not be retried)
             validateMessage(message);
-
-            // Convert to application request and process
-            // Use message's trace_id as idempotency key
-            SendNotificationRequest request = new SendNotificationRequest(
-                message.recipient(),
-                message.slug(),
-                message.language(),
-                message.channel(),
-                message.variables(),
-                java.util.Optional.of(message.traceId())
-            );
-
-            // Send notification asynchronously
-            notificationApplicationService.sendNotification(request);
-
-            // Mark message as processed
-            markMessageAsProcessed(message.traceId());
-
-            logger.info("Notification request processed successfully. Trace ID: {}, Recipient: {}, Template: {}",
-                message.traceId(), message.recipient(), message.slug());
-
         } catch (IllegalArgumentException e) {
-            logger.error("Validation error processing message with trace_id {}: {}", message.traceId(), e.getMessage(), e);
-        } catch (Exception e) {
-            logger.error("Unexpected error processing message with trace_id {}", message.traceId(), e);
+            // Validation errors are client errors - log and skip retry
+            logger.error("Validation error processing message with trace_id {}: {}", message.traceId(), e.getMessage());
+            throw new org.springframework.amqp.AmqpRejectAndDontRequeueException(
+                "Validation failed: " + e.getMessage(), e);
         }
+        
+        // Check if message has already been processed using trace_id
+        if (isMessageAlreadyProcessed(message.traceId())) {
+            logger.debug("Message with trace_id {} already processed, skipping", message.traceId());
+            return;
+        }
+
+        // Convert to application request and process
+        // Use message's trace_id as idempotency key
+        SendNotificationRequest request = new SendNotificationRequest(
+            message.recipient(),
+            message.slug(),
+            message.language(),
+            message.channel(),
+            message.variables(),
+            java.util.Optional.of(message.traceId())
+        );
+
+        // Send notification asynchronously
+        notificationApplicationService.sendNotification(request);
+
+        // Mark message as processed
+        markMessageAsProcessed(message.traceId());
+
+        logger.info("Notification request processed successfully. Trace ID: {}, Recipient: {}, Template: {}",
+            message.traceId(), message.recipient(), message.slug());
     }
 
     /**
