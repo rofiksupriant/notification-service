@@ -2,18 +2,18 @@ package com.vibe.notification.application;
 
 import com.vibe.notification.application.dto.SendNotificationRequest;
 import com.vibe.notification.application.dto.NotificationResponse;
+import com.vibe.notification.application.port.EmailNotificationPort;
+import com.vibe.notification.application.port.WhatsAppNotificationPort;
+import com.vibe.notification.application.port.IdempotencyPort;
 import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.domain.model.NotificationRequest;
 import com.vibe.notification.domain.service.TraceService;
-import com.vibe.notification.infrastructure.adapter.email.EmailNotificationAdapter;
-import com.vibe.notification.infrastructure.adapter.whatsapp.WhatsAppNotificationAdapter;
-import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
-import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessage;
 import com.vibe.notification.domain.service.NotificationDomainService;
 import com.vibe.notification.domain.service.TemplateResolutionService;
 import com.vibe.notification.domain.service.TemplateRenderingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -29,25 +29,28 @@ public class NotificationApplicationService {
     private final NotificationDomainService notificationDomainService;
     private final TemplateResolutionService templateResolutionService;
     private final TemplateRenderingService templateRenderingService;
-    private final EmailNotificationAdapter emailNotificationAdapter;
-    private final WhatsAppNotificationAdapter whatsAppNotificationAdapter;
-    private final ProcessedMessageRepository processedMessageRepository;
+    private final EmailNotificationPort emailNotificationPort;
+    private final WhatsAppNotificationPort whatsAppNotificationPort;
+    private final IdempotencyPort idempotencyPort;
+    private final NotificationApplicationService self;
 
     public NotificationApplicationService(
         TraceService traceService,
         NotificationDomainService notificationDomainService,
         TemplateResolutionService templateResolutionService,
         TemplateRenderingService templateRenderingService,
-        EmailNotificationAdapter emailNotificationAdapter,
-        WhatsAppNotificationAdapter whatsAppNotificationAdapter,
-        ProcessedMessageRepository processedMessageRepository) {
+        EmailNotificationPort emailNotificationPort,
+        WhatsAppNotificationPort whatsAppNotificationPort,
+        IdempotencyPort idempotencyPort,
+        @Lazy NotificationApplicationService self) {
         this.traceService = traceService;
         this.notificationDomainService = notificationDomainService;
         this.templateResolutionService = templateResolutionService;
         this.templateRenderingService = templateRenderingService;
-        this.emailNotificationAdapter = emailNotificationAdapter;
-        this.whatsAppNotificationAdapter = whatsAppNotificationAdapter;
-        this.processedMessageRepository = processedMessageRepository;
+        this.emailNotificationPort = emailNotificationPort;
+        this.whatsAppNotificationPort = whatsAppNotificationPort;
+        this.idempotencyPort = idempotencyPort;
+        this.self = self;
     }
 
     /**
@@ -97,7 +100,7 @@ public class NotificationApplicationService {
         var logEntity = notificationDomainService.createPendingLog(notificationRequest, internalTraceId);
 
         // Execute async processing
-        processNotificationAsync(logEntity.getId(), notificationRequest);
+        self.processNotificationAsync(logEntity.getId(), notificationRequest);
 
         return new NotificationResponse(
             logEntity.getId(),
@@ -114,7 +117,7 @@ public class NotificationApplicationService {
      * @return true if the message was previously processed, false otherwise
      */
     private boolean isMessageAlreadyProcessed(String traceId) {
-        return processedMessageRepository.existsById(traceId);
+        return idempotencyPort.isMessageAlreadyProcessed(traceId);
     }
 
     /**
@@ -123,7 +126,7 @@ public class NotificationApplicationService {
      * @param traceId the unique message identifier
      */
     private void markMessageAsProcessed(String traceId) {
-        processedMessageRepository.save(new ProcessedMessage(traceId));
+        idempotencyPort.markMessageAsProcessed(traceId);
     }
 
     /**
@@ -135,16 +138,16 @@ public class NotificationApplicationService {
             logger.info("Starting async notification processing: logId={}", logId);
 
             // Resolve template with language fallback
-            var template = templateResolutionService.resolveTemplate(request.slug(), request.language());
+            var template = templateResolutionService.resolveTemplate(request.slug(), request.language(), request.channel().name());
 
             // Render template content
             var renderedContent = templateRenderingService.renderContent(template.getContent(), request.variables());
             var renderedSubject = templateRenderingService.renderSubject(template.getSubject(), request.variables());
 
-            // Send via appropriate adapter
+            // Send via appropriate port
             switch (request.channel()) {
-                case EMAIL -> emailNotificationAdapter.sendEmail(request.recipient(), template, renderedContent, renderedSubject);
-                case WHATSAPP -> whatsAppNotificationAdapter.sendWhatsAppMessage(request.recipient(), template, renderedContent);
+                case EMAIL -> emailNotificationPort.sendEmail(request.recipient(), template, renderedSubject, renderedContent);
+                case WHATSAPP -> whatsAppNotificationPort.sendWhatsAppMessage(request.recipient(), template, renderedContent);
             }
 
             // Mark as successfully sent

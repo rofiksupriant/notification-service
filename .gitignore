@@ -46,6 +46,9 @@ gradle/
 node_modules/
 npm-debug.log
 
-**/application.yml
+# Local configuration overrides (never commit these)
+application-local.yml
+application-dev.yml
+src/main/resources/.env
 
 .ignore/

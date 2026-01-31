@@ -3,6 +3,7 @@ package com.vibe.notification.infrastructure.adapter.messaging.rabbitmq;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
@@ -13,6 +14,8 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,12 +35,73 @@ import java.util.Map;
 @Configuration
 @ConditionalOnProperty(name = "app.feature.rabbitmq.enabled", havingValue = "true")
 public class RabbitMqConfiguration {
+    private static final Logger logger = LoggerFactory.getLogger(RabbitMqConfiguration.class);
+    
+    public static final String NOTIFICATION_REQUEST = "notification.request";
+    public static final String NOTIFICATION_DL = "notification.dl";
 
-    public static final String NOTIFICATION_REQUEST_QUEUE = "notification.request.queue";
-    public static final String NOTIFICATION_DLQ = "notification.dlq";
-    public static final String NOTIFICATION_DLX = "notification.dlx";
-    public static final String NOTIFICATION_REQUEST_EXCHANGE = "notification.request.exchange";
-    public static final String NOTIFICATION_REQUEST_ROUTING_KEY = "notification.request.*";
+    /**
+     * Creates RabbitAdmin for managing RabbitMQ resources.
+     * Used for auto-deleting old queues on startup.
+     *
+     * @return the RabbitAdmin bean
+     */
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        return new RabbitAdmin(connectionFactory);
+    }
+
+    /**
+     * Initializer bean that cleans up old queues (v1, v2) on startup.
+     * Ensures fresh queue creation with correct DLX configuration.
+     * 
+     * This prevents PRECONDITION_FAILED errors when queue arguments change.
+     * Old queues are deleted only if they exist.
+     *
+     * @return initialization bean
+     */
+    @Bean
+    public RabbitQueueInitializer rabbitQueueInitializer(RabbitAdmin rabbitAdmin) {
+        return new RabbitQueueInitializer(rabbitAdmin);
+    }
+
+    /**
+     * Declares the Main Exchange.
+     * Messages that come from client will be routed here.
+     *
+     * @return the main exchange bean
+     */
+    @Bean
+    public DirectExchange mainExchange() {
+        return new DirectExchange(NOTIFICATION_REQUEST, true, false);
+    }
+
+    /**
+     * Declares the Main Queue.
+     * Stores messages that come from client.
+     *
+     * @return the configured main queue bean
+     */
+    @Bean
+    public Queue mainQueue() {
+        return QueueBuilder.durable(NOTIFICATION_REQUEST)
+            .withArgument("x-dead-letter-exchange", NOTIFICATION_DL)
+            .withArgument("x-dead-letter-routing-key", NOTIFICATION_DL)
+            .build();
+    }
+
+    /**
+     * Binds the Main Queue to the Main Exchange.
+     *
+     * @return the binding bean
+     */
+    @Bean
+    public Binding mainBinding() {
+        return BindingBuilder
+                .bind(mainQueue())
+                .to(mainExchange())
+                .with(NOTIFICATION_REQUEST);
+    }
 
     /**
      * Declares the Dead Letter Exchange (DLX).
@@ -47,7 +111,7 @@ public class RabbitMqConfiguration {
      */
     @Bean
     public DirectExchange deadLetterExchange() {
-        return new DirectExchange(NOTIFICATION_DLX, true, false);
+        return new DirectExchange(NOTIFICATION_DL, true, false);
     }
 
     /**
@@ -58,7 +122,7 @@ public class RabbitMqConfiguration {
      */
     @Bean
     public Queue deadLetterQueue() {
-        return QueueBuilder.durable(NOTIFICATION_DLQ).build();
+        return QueueBuilder.durable(NOTIFICATION_DL).build();
     }
 
     /**
@@ -71,22 +135,7 @@ public class RabbitMqConfiguration {
         return BindingBuilder
                 .bind(deadLetterQueue())
                 .to(deadLetterExchange())
-                .with(NOTIFICATION_REQUEST_QUEUE);
-    }
-
-    /**
-     * Declares the notification request queue with DLX configuration.
-     * Queue is durable and will persist messages even if RabbitMQ restarts.
-     * Failed messages are routed to the DLX after max retries.
-     *
-     * @return the configured queue bean
-     */
-    @Bean
-    public Queue notificationRequestQueue() {
-        return QueueBuilder.durable(NOTIFICATION_REQUEST_QUEUE)
-                .withArgument("x-dead-letter-exchange", NOTIFICATION_DLX)
-                .withArgument("x-dead-letter-routing-key", NOTIFICATION_REQUEST_QUEUE)
-                .build();
+                .with(NOTIFICATION_DL);
     }
 
     /**
@@ -150,9 +199,9 @@ public class RabbitMqConfiguration {
         // Custom message recoverer that adds error headers to DLQ messages
         DlqMessageRecoverer messageRecoverer = new DlqMessageRecoverer(
             rabbitTemplate,
-            NOTIFICATION_DLX,
-            NOTIFICATION_REQUEST_QUEUE,
-            NOTIFICATION_REQUEST_QUEUE
+            NOTIFICATION_DL,
+            NOTIFICATION_DL,
+            NOTIFICATION_REQUEST
         );
         
         return org.springframework.amqp.rabbit.config.RetryInterceptorBuilder

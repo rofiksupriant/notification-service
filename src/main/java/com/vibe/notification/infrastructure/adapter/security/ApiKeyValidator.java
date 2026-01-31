@@ -1,16 +1,17 @@
 package com.vibe.notification.infrastructure.adapter.security;
 
+import com.vibe.notification.application.port.ApiKeyValidationPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Component for validating API keys in requests
+ * Component implementing ApiKeyValidationPort
  * Implements shared secret validation for API authorization
  */
 @Component
-public class ApiKeyValidator {
+public class ApiKeyValidator implements ApiKeyValidationPort {
     private static final Logger logger = LoggerFactory.getLogger(ApiKeyValidator.class);
     private static final String API_KEY_HEADER = "X-API-Key";
 
@@ -23,6 +24,7 @@ public class ApiKeyValidator {
      * @param apiKey the API key from header
      * @return true if valid, false otherwise
      */
+    @Override
     public boolean validateApiKey(String apiKey) {
         if (apiKey == null || apiKey.isBlank()) {
             logger.warn("API key validation failed: API key is missing");

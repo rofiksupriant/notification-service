@@ -3,6 +3,11 @@ package com.vibe.notification.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.NotificationRequestMessage;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
+import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.RabbitMqConfiguration;
+import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
+import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
+import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
@@ -11,12 +16,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -27,26 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration tests for RabbitMQ message consumption and idempotent processing.
- * Uses TestContainers to spin up a real RabbitMQ instance for testing.
+ * Uses local RabbitMQ instance on localhost:5672
  */
 @SpringBootTest
-@Testcontainers
 @ActiveProfiles("test")
-public class RabbitMqIntegrationTest {
-
-    @Container
-    static RabbitMQContainer rabbitMqContainer = new RabbitMQContainer("rabbitmq:3.12-management-alpine")
-            .withUser("guest", "guest")
-            .withPermission("/", "guest", ".*", ".*", ".*");
-
-    @DynamicPropertySource
-    static void registerRabbitMqProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.rabbitmq.host", rabbitMqContainer::getHost);
-        registry.add("spring.rabbitmq.port", rabbitMqContainer::getAmqpPort);
-        registry.add("spring.rabbitmq.username", () -> "guest");
-        registry.add("spring.rabbitmq.password", () -> "guest");
-        registry.add("app.feature.rabbitmq.enabled", () -> "true");
-    }
+class RabbitMqIntegrationTest {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -56,13 +40,34 @@ public class RabbitMqIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    private static final String NOTIFICATION_REQUEST_QUEUE = "notification.request.queue";
+    
+    @Autowired
+    private NotificationTemplateRepository templateRepository;
 
     @BeforeEach
     void setUp() {
         // Clear processed messages before each test
         processedMessageRepository.deleteAll();
+                
+        // Clear templates
+        templateRepository.deleteAll();
+        
+        // Create test templates for successful processing tests - EMAIL
+        NotificationTemplateId emailTemplateId = new NotificationTemplateId("welcome-template", "en", "EMAIL");
+        NotificationTemplateEntity emailTemplate = new NotificationTemplateEntity();
+        emailTemplate.setId(emailTemplateId);
+        emailTemplate.setTemplateType("TEXT");
+        emailTemplate.setSubject("Welcome [[${userName}]]!");
+        emailTemplate.setContent("Hello [[${userName}]], welcome to our service!");
+        templateRepository.save(emailTemplate);
+        
+        // Create test templates for successful processing tests - WHATSAPP
+        NotificationTemplateId waTemplateId = new NotificationTemplateId("welcome-template", "en", "WHATSAPP");
+        NotificationTemplateEntity waTemplate = new NotificationTemplateEntity();
+        waTemplate.setId(waTemplateId);
+        waTemplate.setTemplateType("TEXT");
+        waTemplate.setContent("Hello [[${userName}]], welcome to our service via WhatsApp!");
+        templateRepository.save(waTemplate);
     }
 
     /**
@@ -79,10 +84,10 @@ public class RabbitMqIntegrationTest {
 
         NotificationRequestMessage message = new NotificationRequestMessage(
                 traceId,
-                "+6281234567890",
+                "6281991388080",
                 "welcome-template",
                 "en",
-                "whatsapp",
+                "WHATSAPP",
                 variables
         );
 
@@ -97,7 +102,7 @@ public class RabbitMqIntegrationTest {
             props.setContentEncoding("UTF-8");
             
             Message msg = new Message(body, props);
-            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
+            rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize message", e);
         }
@@ -130,7 +135,7 @@ public class RabbitMqIntegrationTest {
                 "jane@example.com",
                 "welcome-template",
                 "en",
-                "email",
+                "EMAIL",
                 variables
         );
 
@@ -144,8 +149,8 @@ public class RabbitMqIntegrationTest {
             props.setContentEncoding("UTF-8");
             
             Message msg = new Message(body, props);
-            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
-            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
+            rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST, msg);
+            rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize message", e);
         }
@@ -184,7 +189,7 @@ public class RabbitMqIntegrationTest {
 
         NotificationRequestMessage invalidMessage = new NotificationRequestMessage(
                 traceId,
-                "+6281234567890",
+                "6281991388080",
                 "welcome-template",
                 "en",
                 null,  // Missing required channel field
@@ -201,7 +206,7 @@ public class RabbitMqIntegrationTest {
             props.setContentEncoding("UTF-8");
             
             Message msg = new Message(body, props);
-            rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
+            rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialize message", e);
         }
@@ -234,10 +239,10 @@ public class RabbitMqIntegrationTest {
 
             NotificationRequestMessage message = new NotificationRequestMessage(
                     traceId,
-                    "+6281234567890",
+                    "6281991388080",
                     "welcome-template",
                     "en",
-                    "whatsapp",
+                    "WHATSAPP",
                     variables
             );
 
@@ -251,7 +256,7 @@ public class RabbitMqIntegrationTest {
                 props.setContentEncoding("UTF-8");
                 
                 Message msg = new Message(body, props);
-                rabbitTemplate.send(NOTIFICATION_REQUEST_QUEUE, msg);
+                rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST, msg);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to serialize message", e);
             }

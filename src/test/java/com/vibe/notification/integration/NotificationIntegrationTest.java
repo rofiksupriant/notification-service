@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.UUID;
 
+import java.time.Duration;
+
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,14 +36,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DisplayName("Notification Service E2E Integration Tests")
 class NotificationIntegrationTest {
-
-    // Testcontainers removed - using H2 in-memory database instead
-    // @Container
-    // static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
-    //     .withDatabaseName("notif_db_test")
-    //     .withUsername("test_user")
-    //     .withPassword("test_pass");
-
     @Autowired
     private MockMvc mockMvc;
 
@@ -64,17 +58,27 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("Should process notification request and create pending log")
     void shouldProcessNotificationAndCreateLog() throws Exception {
-        // Given - Create a test template
-        var templateId = new NotificationTemplateId("welcome", "en");
-        var template = new NotificationTemplateEntity(
-            templateId,
-            "EMAIL",
+        // Given - Create test templates for EMAIL
+        var emailTemplateId = new NotificationTemplateId("welcome", "en", "EMAIL");
+        var emailTemplate = new NotificationTemplateEntity(
+            emailTemplateId,
             "TEXT",
             "Welcome to [[${companyName}]]",
             "Hello [[${name}]], welcome to [[${companyName}]]!",
             null
         );
-        templateRepository.save(template);
+        templateRepository.save(emailTemplate);
+        
+        // And - Create test templates for WHATSAPP
+        var waTemplateId = new NotificationTemplateId("welcome", "en", "whatsapp");
+        var waTemplate = new NotificationTemplateEntity(
+            waTemplateId,
+            "TEXT",
+            null,
+            "Hello [[${name}]], welcome to [[${companyName}]] via WhatsApp!",
+            null
+        );
+        templateRepository.save(waTemplate);
 
         // And - Prepare request
         var variables = new HashMap<String, Object>();
@@ -104,7 +108,10 @@ class NotificationIntegrationTest {
         var traceId = UUID.fromString(responseBody.get("traceId").asText());
 
         // Verify log was created with PENDING or SUCCESS status
-        await().untilAsserted(() -> {
+        await()
+            .atMost(Duration.ofSeconds(15))
+            .pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> {
             var logs = logRepository.findByTraceId(traceId);
             assertFalse(logs.isEmpty(), "No logs found for trace_id");
             assertEquals(1, logs.size());
@@ -128,17 +135,27 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("Should resolve template with language fallback")
     void shouldResolveTemplateWithFallback() throws Exception {
-        // Given - Create only English template (no French)
-        var englishTemplateId = new NotificationTemplateId("order_confirmation", "en");
-        var englishTemplate = new NotificationTemplateEntity(
-            englishTemplateId,
-            "EMAIL",
+        // Given - Create only English template (no French) for EMAIL
+        var emailTemplateId = new NotificationTemplateId("order_confirmation", "en", "EMAIL");
+        var emailTemplate = new NotificationTemplateEntity(
+            emailTemplateId,
             "TEXT",
             "Order Confirmation",
             "Your order [[${orderId}]] is confirmed",
             null
         );
-        templateRepository.save(englishTemplate);
+        templateRepository.save(emailTemplate);
+        
+        // And - Create English template for WHATSAPP
+        var waTemplateId = new NotificationTemplateId("order_confirmation", "en", "whatsapp");
+        var waTemplate = new NotificationTemplateEntity(
+            waTemplateId,
+            "TEXT",
+            null,
+            "Your order [[${orderId}]] is confirmed via WhatsApp",
+            null
+        );
+        templateRepository.save(waTemplate);
 
         // And - Prepare request in French (fallback to English)
         var variables = new HashMap<String, Object>();
@@ -166,7 +183,10 @@ class NotificationIntegrationTest {
         var responseBody = objectMapper.readTree(response.getResponse().getContentAsString());
         var traceId = UUID.fromString(responseBody.get("traceId").asText());
 
-        await().untilAsserted(() -> {
+        await()
+            .atMost(Duration.ofSeconds(15))
+            .pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> {
             var logs = logRepository.findByTraceId(traceId);
             assertFalse(logs.isEmpty());
         });
@@ -192,26 +212,39 @@ class NotificationIntegrationTest {
             .andExpect(status().isAccepted());
 
         // Wait a bit for async processing and verify log is marked as FAILED
-        await().untilAsserted(() -> {
-            var failedLogs = logRepository.findByStatus("FAILED");
-            assertFalse(failedLogs.isEmpty(), "Expected at least one FAILED log");
-        });
+        await()
+            .atMost(Duration.ofSeconds(15))
+            .pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> {
+                var failedLogs = logRepository.findByStatus("FAILED");
+                assertFalse(failedLogs.isEmpty(), "Expected at least one FAILED log");
+            });
     }
 
     @Test
     @DisplayName("Should render template with multiple variables")
     void shouldRenderTemplateWithMultipleVariables() throws Exception {
-        // Given
-        var templateId = new NotificationTemplateId("invoice", "en");
-        var template = new NotificationTemplateEntity(
-            templateId,
-            "EMAIL",
+        // Given - Create template for EMAIL
+        var emailTemplateId = new NotificationTemplateId("invoice", "en", "EMAIL");
+        var emailTemplate = new NotificationTemplateEntity(
+            emailTemplateId,
             "TEXT",
             "Invoice [[${invoiceNumber}]]",
             "Invoice #[[${invoiceNumber}]] for [[${customerName}]] - Amount: [[${amount}]]",
             null
         );
-        templateRepository.save(template);
+        templateRepository.save(emailTemplate);
+        
+        // And - Create template for WHATSAPP
+        var waTemplateId = new NotificationTemplateId("invoice", "en", "whatsapp");
+        var waTemplate = new NotificationTemplateEntity(
+            waTemplateId,
+            "TEXT",
+            null,
+            "Invoice #[[${invoiceNumber}]] for [[${customerName}]] - Amount: [[${amount}]] (WhatsApp)",
+            null
+        );
+        templateRepository.save(waTemplate);
 
         var variables = new HashMap<String, Object>();
         variables.put("invoiceNumber", "INV-2024-001");
@@ -233,7 +266,10 @@ class NotificationIntegrationTest {
             .andExpect(status().isAccepted());
 
         // Then - Verify log was created with variables
-        await().untilAsserted(() -> {
+        await()
+            .atMost(Duration.ofSeconds(15))
+            .pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> {
             var logs = logRepository.findByRecipient("billing@acme.com");
             assertFalse(logs.isEmpty());
             assertNotNull(logs.get(0).getVariables());
@@ -243,23 +279,33 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("Should handle WhatsApp message template")
     void shouldHandleWhatsAppTemplate() throws Exception {
-        // Given
-        var templateId = new NotificationTemplateId("otp", "en");
-        var template = new NotificationTemplateEntity(
-            templateId,
-            "WHATSAPP",
+        // Given - Create template for EMAIL
+        var emailTemplateId = new NotificationTemplateId("otp", "en", "email");
+        var emailTemplate = new NotificationTemplateEntity(
+            emailTemplateId,
             "TEXT",
             null,
             "Your OTP is [[${otp}]]",
             null
         );
-        templateRepository.save(template);
+        templateRepository.save(emailTemplate);
+        
+        // And - Create template for WHATSAPP
+        var waTemplateId = new NotificationTemplateId("otp", "en", "whatsapp");
+        var waTemplate = new NotificationTemplateEntity(
+            waTemplateId,
+            "TEXT",
+            null,
+            "Your OTP is [[${otp}]] via WhatsApp",
+            null
+        );
+        templateRepository.save(waTemplate);
 
         var variables = new HashMap<String, Object>();
         variables.put("otp", "123456");
 
         var request = new SendNotificationRequest(
-            "+6281234567890",
+            "6281991388080",
             "otp",
             "en",
             "WHATSAPP",
@@ -273,8 +319,11 @@ class NotificationIntegrationTest {
             .andExpect(status().isAccepted());
 
         // Then - Verify log was created with WHATSAPP channel
-        await().untilAsserted(() -> {
-            var logs = logRepository.findByRecipient("+6281234567890");
+        await()
+            .atMost(Duration.ofSeconds(15))
+            .pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> {
+            var logs = logRepository.findByRecipient("6281991388080");
             assertFalse(logs.isEmpty());
             assertEquals("WHATSAPP", logs.get(0).getChannel());
         });

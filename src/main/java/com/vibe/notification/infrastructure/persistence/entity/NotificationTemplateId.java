@@ -15,12 +15,16 @@ public class NotificationTemplateId implements Serializable {
     @Column(name = "language", nullable = false)
     private String language;
 
+    @Column(name = "channel", nullable = false)
+    private String channel;
+
     // Constructors
     public NotificationTemplateId() {}
 
-    public NotificationTemplateId(String slug, String language) {
+    public NotificationTemplateId(String slug, String language, String channel) {
         this.slug = slug;
         this.language = language;
+        this.channel = channel;
     }
 
     // Getters
@@ -32,16 +36,22 @@ public class NotificationTemplateId implements Serializable {
         return language;
     }
 
+    public String getChannel() {
+        return channel;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         NotificationTemplateId that = (NotificationTemplateId) o;
-        return Objects.equals(slug, that.slug) && Objects.equals(language, that.language);
+        return Objects.equals(slug, that.slug) && 
+               Objects.equals(language, that.language) && 
+               Objects.equals(channel, that.channel);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(slug, language);
+        return Objects.hash(slug, language, channel);
     }
 }

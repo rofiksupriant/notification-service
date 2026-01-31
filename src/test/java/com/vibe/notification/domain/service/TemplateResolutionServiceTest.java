@@ -1,9 +1,9 @@
 package com.vibe.notification.domain.service;
 
+import com.vibe.notification.domain.dto.TemplateDTO;
+import com.vibe.notification.domain.dto.TemplateIdDTO;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
-import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
-import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
-import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
+import com.vibe.notification.domain.port.NotificationTemplatePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,33 +22,47 @@ import static org.mockito.Mockito.when;
 class TemplateResolutionServiceTest {
 
     @Mock
-    private NotificationTemplateRepository templateRepository;
+    private NotificationTemplatePort templatePort;
 
     @InjectMocks
     private TemplateResolutionService templateResolutionService;
 
-    private NotificationTemplateEntity idTemplate;
-    private NotificationTemplateEntity enTemplate;
+    private TemplateDTO idTemplate;
+    private TemplateDTO enTemplate;
+    private TemplateDTO idWaTemplate;
+    private TemplateDTO enWaTemplate;
 
     @BeforeEach
     void setUp() {
-        // Create Indonesian template
-        idTemplate = new NotificationTemplateEntity(
-            new NotificationTemplateId("welcome", "id"),
-            "EMAIL",
-            "TEXT",
+        // Create Indonesian EMAIL template
+        idTemplate = TemplateTestHelper.createTemplateDTO(
+            "welcome", "id", "EMAIL",
             "Selamat Datang",
             "Halo [[${name}]], selamat datang di layanan kami!",
             null
         );
 
-        // Create English template (fallback)
-        enTemplate = new NotificationTemplateEntity(
-            new NotificationTemplateId("welcome", "en"),
-            "EMAIL",
-            "TEXT",
+        // Create English EMAIL template (fallback)
+        enTemplate = TemplateTestHelper.createTemplateDTO(
+            "welcome", "en", "EMAIL",
             "Welcome",
             "Hello [[${name}]], welcome to our service!",
+            null
+        );
+        
+        // Create Indonesian WHATSAPP template
+        idWaTemplate = TemplateTestHelper.createTemplateDTO(
+            "welcome", "id", "WHATSAPP",
+            null,
+            "Halo [[${name}]], selamat datang di layanan kami via WhatsApp!",
+            null
+        );
+        
+        // Create English WHATSAPP template (fallback)
+        enWaTemplate = TemplateTestHelper.createTemplateDTO(
+            "welcome", "en", "WHATSAPP",
+            null,
+            "Hello [[${name}]], welcome to our service via WhatsApp!",
             null
         );
     }
@@ -57,12 +71,12 @@ class TemplateResolutionServiceTest {
     @DisplayName("Should resolve template when requested language exists")
     void shouldResolveTemplateInRequestedLanguage() {
         // Given
-        var templateId = new NotificationTemplateId("welcome", "id");
-        when(templateRepository.findById(templateId))
+        var templateId = new TemplateIdDTO("welcome", "id", "email");
+        when(templatePort.findById(templateId))
             .thenReturn(Optional.of(idTemplate));
 
         // When
-        var result = templateResolutionService.resolveTemplate("welcome", "id");
+        var result = templateResolutionService.resolveTemplate("welcome", "id", "email");
 
         // Then
         assertNotNull(result);
@@ -74,16 +88,16 @@ class TemplateResolutionServiceTest {
     @DisplayName("Should fallback to English when requested language not found")
     void shouldFallbackToEnglish() {
         // Given
-        var frenchId = new NotificationTemplateId("welcome", "fr");
-        var englishId = new NotificationTemplateId("welcome", "en");
+        var frenchId = new TemplateIdDTO("welcome", "fr", "email");
+        var englishId = new TemplateIdDTO("welcome", "en", "email");
         
-        when(templateRepository.findById(frenchId))
+        when(templatePort.findById(frenchId))
             .thenReturn(Optional.empty());
-        when(templateRepository.findById(englishId))
+        when(templatePort.findById(englishId))
             .thenReturn(Optional.of(enTemplate));
 
         // When
-        var result = templateResolutionService.resolveTemplate("welcome", "fr");
+        var result = templateResolutionService.resolveTemplate("welcome", "fr", "email");
 
         // Then
         assertNotNull(result);
@@ -95,17 +109,17 @@ class TemplateResolutionServiceTest {
     @DisplayName("Should throw exception when template not found in any language")
     void shouldThrowExceptionWhenTemplateNotFound() {
         // Given
-        var missingId = new NotificationTemplateId("missing", "de");
-        when(templateRepository.findById(missingId))
+        var missingId = new TemplateIdDTO("missing", "de", "email");
+        when(templatePort.findById(missingId))
             .thenReturn(Optional.empty());
         
-        var englishId = new NotificationTemplateId("missing", "en");
-        when(templateRepository.findById(englishId))
+        var englishId = new TemplateIdDTO("missing", "en", "email");
+        when(templatePort.findById(englishId))
             .thenReturn(Optional.empty());
 
         // When & Then
         assertThrows(TemplateNotFoundException.class, () ->
-            templateResolutionService.resolveTemplate("missing", "de")
+            templateResolutionService.resolveTemplate("missing", "de", "email")
         );
     }
 }

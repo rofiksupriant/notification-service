@@ -35,31 +35,38 @@ public class WatzapClient {
 
     /**
      * Send text message to WhatsApp recipient
+     * API: https://api.watzap.id/v1/send_message
      */
     public WatzapResponse sendTextMessage(String phoneNumber, String message) {
         logger.debug("Sending text message to {}", phoneNumber);
 
         var requestBody = new HashMap<String, Object>();
-        requestBody.put("number", phoneNumber);
-        requestBody.put("text", message);
+        requestBody.put("api_key", watzapProperties.getApiKey());
+        requestBody.put("number_key", watzapProperties.getNumberKey());
+        requestBody.put("phone_no", phoneNumber);
+        requestBody.put("message", message);
+        requestBody.put("wait_until_send", "1");
 
         return sendRequest("/send_message", requestBody);
     }
 
     /**
      * Send image message to WhatsApp recipient
+     * API: https://api.watzap.id/v1/send_message
      */
     public WatzapResponse sendImageMessage(String phoneNumber, String imageUrl, String caption) {
         logger.debug("Sending image message to {}", phoneNumber);
 
         var requestBody = new HashMap<String, Object>();
-        requestBody.put("number", phoneNumber);
-        requestBody.put("image", imageUrl);
-        if (caption != null && !caption.isBlank()) {
-            requestBody.put("caption", caption);
-        }
+        requestBody.put("api_key", watzapProperties.getApiKey());
+        requestBody.put("number_key", watzapProperties.getNumberKey());
+        requestBody.put("phone_no", phoneNumber);
+        requestBody.put("url", imageUrl);
+        requestBody.put("message", caption != null ? caption : "");
+        requestBody.put("separate_caption", "0");
+        requestBody.put("wait_until_send", "1");
 
-        return sendRequest("/send_image", requestBody);
+        return sendRequest("/send_image_url", requestBody);
     }
 
     /**
@@ -67,10 +74,9 @@ public class WatzapClient {
      */
     private WatzapResponse sendRequest(String endpoint, Map<String, Object> requestBody) {
         try {
+            logger.debug("Sending request to Watzap API: endpoint={}, body={}", endpoint, requestBody);
             return webClient.post()
                 .uri(endpoint)
-                .header("Authorization", "Bearer " + watzapProperties.getApiKey())
-                .header("X-Number-Key", watzapProperties.getNumberKey())
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(WatzapResponse.class)
@@ -78,7 +84,7 @@ public class WatzapClient {
                 .retryWhen(Retry.backoff(2, Duration.ofMillis(500)))
                 .block();
         } catch (WebClientResponseException e) {
-            logger.error("Watzap API error: status={}, message={}", e.getStatusCode(), e.getResponseBodyAsString());
+            logger.error("Watzap API error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new NotificationException("Watzap API error: " + e.getMessage(), e);
         } catch (Exception e) {
             logger.error("Failed to send request to Watzap API", e);

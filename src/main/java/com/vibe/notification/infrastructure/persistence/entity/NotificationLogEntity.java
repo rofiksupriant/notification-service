@@ -31,7 +31,7 @@ public class NotificationLogEntity {
     @Column(name = "channel", nullable = false)
     private String channel;
 
-    @Column(name = "variables", columnDefinition = "JSONB")
+    @Column(name = "variables")
     @Convert(converter = JsonNodeConverter.class)
     private JsonNode variables;
 

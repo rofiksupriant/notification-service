@@ -13,9 +13,6 @@ public class NotificationTemplateEntity {
     @EmbeddedId
     private NotificationTemplateId id;
 
-    @Column(name = "channel", nullable = false)
-    private String channel;
-
     @Column(name = "template_type", nullable = false)
     private String templateType;
 
@@ -39,10 +36,9 @@ public class NotificationTemplateEntity {
     // Constructors
     public NotificationTemplateEntity() {}
 
-    public NotificationTemplateEntity(NotificationTemplateId id, String channel, String templateType,
+    public NotificationTemplateEntity(NotificationTemplateId id, String templateType,
                                      String subject, String content, String imageUrl) {
         this.id = id;
-        this.channel = channel;
         this.templateType = templateType;
         this.subject = subject;
         this.content = content;
@@ -59,11 +55,7 @@ public class NotificationTemplateEntity {
     }
 
     public String getChannel() {
-        return channel;
-    }
-
-    public void setChannel(String channel) {
-        this.channel = channel;
+        return id != null ? id.getChannel() : null;
     }
 
     public String getTemplateType() {

@@ -6,20 +6,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Watzap API response models
  */
 public record WatzapResponse(
-    @JsonProperty("success")
-    boolean success,
-    
+    @JsonProperty("status")
+    String status,
+
     @JsonProperty("message")
     String message,
-    
-    @JsonProperty("data")
-    WatzapData data
+
+    @JsonProperty("ack")
+    String ack
 ) {
-    public record WatzapData(
-        @JsonProperty("id")
-        String id,
-        
-        @JsonProperty("status")
-        String status
-    ) {}
+    public boolean isSuccess() {
+        return "200".equals(status) || "successfully".equalsIgnoreCase(ack);
+    }
 }

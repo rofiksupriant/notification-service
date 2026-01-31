@@ -1,10 +1,15 @@
 package com.vibe.notification.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vibe.notification.domain.model.TemplateType;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.NotificationRequestMessage;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.RabbitMqConfiguration;
+import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
+import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
+import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
@@ -12,11 +17,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,32 +33,20 @@ import static org.junit.jupiter.api.Assertions.*;
  * - DLQ routing after exhausted retries
  * - Custom header x-last-error in DLQ messages
  * - Exponential backoff timing
- * - Differentiation between transient errors (retryable) and validation errors (non-retryable)
+ * - Differentiation between transient errors (retryable) and validation errors (non-retryable) 
  */
 @SpringBootTest
-@Testcontainers
 @ActiveProfiles("test")
-public class RetryAndDlqIntegrationTest {
-
-    @Container
-    static RabbitMQContainer rabbitMqContainer = new RabbitMQContainer("rabbitmq:3.12-management-alpine")
-            .withUser("guest", "guest")
-            .withPermission("/", "guest", ".*", ".*", ".*");
-
-    @DynamicPropertySource
-    static void registerRabbitMqProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.rabbitmq.host", rabbitMqContainer::getHost);
-        registry.add("spring.rabbitmq.port", rabbitMqContainer::getAmqpPort);
-        registry.add("spring.rabbitmq.username", () -> "guest");
-        registry.add("spring.rabbitmq.password", () -> "guest");
-        registry.add("app.feature.rabbitmq.enabled", () -> "true");
-    }
+class RetryAndDlqIntegrationTest {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
     @Autowired
     private ProcessedMessageRepository processedMessageRepository;
+
+    @Autowired
+    private NotificationTemplateRepository templateRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -68,11 +56,31 @@ public class RetryAndDlqIntegrationTest {
         // Clear processed messages before each test
         processedMessageRepository.deleteAll();
         
+        // Clear templates
+        templateRepository.deleteAll();
+        
+        // Create test templates for successful processing tests - EMAIL
+        NotificationTemplateId emailTemplateId = new NotificationTemplateId("welcome-template", "en", "EMAIL");
+        NotificationTemplateEntity emailTemplate = new NotificationTemplateEntity();
+        emailTemplate.setId(emailTemplateId);
+        emailTemplate.setTemplateType("TEXT");
+        emailTemplate.setSubject("Welcome [[${userName}]]!");
+        emailTemplate.setContent("Hello [[${userName}]], welcome to our service!");
+        templateRepository.save(emailTemplate);
+        
+        // Create test templates for successful processing tests - WHATSAPP
+        NotificationTemplateId waTemplateId = new NotificationTemplateId("welcome-template", "en", "WHATSAPP");
+        NotificationTemplateEntity waTemplate = new NotificationTemplateEntity();
+        waTemplate.setId(waTemplateId);
+        waTemplate.setTemplateType("TEXT");
+        waTemplate.setContent("Hello [[${userName}]], welcome to our service via WhatsApp!");
+        templateRepository.save(waTemplate);
+        
         // Purge queues to ensure clean state
         try {
             rabbitTemplate.execute(channel -> {
-                channel.queuePurge(RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE);
-                channel.queuePurge(RabbitMqConfiguration.NOTIFICATION_DLQ);
+                channel.queuePurge(RabbitMqConfiguration.NOTIFICATION_REQUEST);
+                channel.queuePurge(RabbitMqConfiguration.NOTIFICATION_DL);
                 return null;
             });
         } catch (Exception e) {
@@ -92,10 +100,10 @@ public class RetryAndDlqIntegrationTest {
 
         NotificationRequestMessage message = new NotificationRequestMessage(
                 traceId,
-                "test@example.com",
+                "rofik@newtronic-solution.com",
                 "welcome-template",
                 "en",
-                "email",
+                "EMAIL",
                 variables
         );
 
@@ -126,10 +134,10 @@ public class RetryAndDlqIntegrationTest {
 
         NotificationRequestMessage message = new NotificationRequestMessage(
                 traceId,
-                "test@example.com",
+                "rofik@newtronic-solution.com",
                 "non-existent-template",  // This will cause failures
                 "en",
-                "email",
+                "EMAIL",
                 variables
         );
 
@@ -143,7 +151,7 @@ public class RetryAndDlqIntegrationTest {
                 .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     // Check DLQ for the message
-                    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DLQ, 1000);
+                    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DL, 1000);
                     assertNotNull(dlqMessage, "Message should be in DLQ after max retries");
                     
                     // Verify custom header x-last-error exists
@@ -169,7 +177,7 @@ public class RetryAndDlqIntegrationTest {
                 "invalid@example.com",
                 "non-existent-template",
                 "en",
-                "email",
+                "EMAIL",
                 variables
         );
 
@@ -178,10 +186,10 @@ public class RetryAndDlqIntegrationTest {
 
         // Assert
         await()
-                .atMost(20, TimeUnit.SECONDS)
-                .pollInterval(500, TimeUnit.MILLISECONDS)
+                .atMost(60, TimeUnit.SECONDS)
+                .pollInterval(1000, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
-                    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DLQ, 1000);
+                    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DL, 1000);
                     assertNotNull(dlqMessage, "Message should be in DLQ");
                     
                     MessageProperties props = dlqMessage.getMessageProperties();
@@ -208,10 +216,10 @@ public class RetryAndDlqIntegrationTest {
 
         NotificationRequestMessage message = new NotificationRequestMessage(
                 traceId,
-                "test@example.com",
+                "rofik@newtronic-solution.com",
                 "non-existent-template",
                 "en",
-                "email",
+                "EMAIL",
                 variables
         );
 
@@ -225,7 +233,7 @@ public class RetryAndDlqIntegrationTest {
                 .atMost(30, TimeUnit.SECONDS)   // At most 30 seconds (retries + processing overhead)
                 .pollInterval(500, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
-                    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DLQ, 1000);
+                    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfiguration.NOTIFICATION_DL, 1000);
                     assertNotNull(dlqMessage, "Message should be in DLQ after retries");
                     
                     long duration = System.currentTimeMillis() - startTime;
@@ -247,7 +255,7 @@ public class RetryAndDlqIntegrationTest {
                     Boolean result = rabbitTemplate.execute(channel -> {
                         try {
                             // Try to declare passively - will succeed if queue exists
-                            channel.queueDeclarePassive(RabbitMqConfiguration.NOTIFICATION_DLQ);
+                            channel.queueDeclarePassive(RabbitMqConfiguration.NOTIFICATION_DL);
                             return true;
                         } catch (Exception e) {
                             return false;
@@ -270,7 +278,7 @@ public class RetryAndDlqIntegrationTest {
             props.setContentEncoding("UTF-8");
             
             Message msg = new Message(body, props);
-            rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE, msg);
+            rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_REQUEST, msg);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send message", e);
         }

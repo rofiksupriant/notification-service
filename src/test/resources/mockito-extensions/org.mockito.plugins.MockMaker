@@ -1,4 +1,4 @@
-# Mockito configuration for Java 21+ compatibility
+# Mockito 5.x configuration for Java 21+ compatibility
 # Using inline mock maker (requires byte-buddy-agent)
-org.mockito.internal.creation.InlineByteBuddyMockMaker
+mock-maker-inline
 

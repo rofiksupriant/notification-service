@@ -2,9 +2,9 @@ package com.vibe.notification.presentation.controller;
 
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.actuate.health.Status;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 import javax.sql.DataSource;
 import java.sql.Connection;
 
@@ -15,15 +15,17 @@ import java.sql.Connection;
 @Component
 public class NotificationHealthIndicator implements HealthIndicator {
 
-    @Autowired(required = false)
-    private DataSource dataSource;
+    private final DataSource dataSource;
+    private final JavaMailSender mailSender;
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+    public NotificationHealthIndicator(DataSource dataSource, JavaMailSender mailSender) {
+        this.dataSource = dataSource;
+        this.mailSender = mailSender;
+    }
 
     @Override
     public Health health() {
-        var builder = new Health.Builder();
+        Health.Builder builder = Health.up();
 
         // Check Database
         var dbHealth = checkDatabase();
@@ -43,7 +45,7 @@ public class NotificationHealthIndicator implements HealthIndicator {
             builder.withDetail("mail", "SMTP not available");
         }
 
-        return builder.up().build();
+        return builder.build();
     }
 
     private HealthCheckResult checkDatabase() {

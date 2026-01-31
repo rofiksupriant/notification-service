@@ -1,9 +1,9 @@
 package com.vibe.notification.domain.service;
 
+import com.vibe.notification.domain.dto.TemplateDTO;
+import com.vibe.notification.domain.dto.TemplateIdDTO;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
-import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
-import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
-import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
+import com.vibe.notification.domain.port.NotificationTemplatePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,22 +17,22 @@ public class TemplateResolutionService {
     private static final Logger logger = LoggerFactory.getLogger(TemplateResolutionService.class);
     private static final String DEFAULT_LANGUAGE = "en";
 
-    private final NotificationTemplateRepository templateRepository;
+    private final NotificationTemplatePort templatePort;
 
-    public TemplateResolutionService(NotificationTemplateRepository templateRepository) {
-        this.templateRepository = templateRepository;
+    public TemplateResolutionService(NotificationTemplatePort templatePort) {
+        this.templatePort = templatePort;
     }
 
     /**
-     * Resolve template by slug and language with fallback logic
+     * Resolve template by slug, language, and channel with fallback logic
      * Fallback order: 1. requested language, 2. default 'en'
      */
-    public NotificationTemplateEntity resolveTemplate(String slug, String language) {
-        logger.debug("Resolving template: slug={}, language={}", slug, language);
+    public TemplateDTO resolveTemplate(String slug, String language, String channel) {
+        logger.debug("Resolving template: slug={}, language={}, channel={}", slug, language, channel);
 
         // Try requested language first
-        var templateId = new NotificationTemplateId(slug, language);
-        var template = templateRepository.findById(templateId);
+        var templateId = new TemplateIdDTO(slug, language, channel);
+        var template = templatePort.findById(templateId);
         
         if (template.isPresent()) {
             logger.debug("Template found for requested language: {}", language);
@@ -43,8 +43,8 @@ public class TemplateResolutionService {
 
         // Fallback to default language if different from requested
         if (!language.equals(DEFAULT_LANGUAGE)) {
-            var fallbackId = new NotificationTemplateId(slug, DEFAULT_LANGUAGE);
-            var fallbackTemplate = templateRepository.findById(fallbackId);
+            var fallbackId = new TemplateIdDTO(slug, DEFAULT_LANGUAGE, channel);
+            var fallbackTemplate = templatePort.findById(fallbackId);
             
             if (fallbackTemplate.isPresent()) {
                 logger.debug("Template found with fallback language: {}", DEFAULT_LANGUAGE);
@@ -53,7 +53,7 @@ public class TemplateResolutionService {
         }
 
         // Not found in either language
-        logger.error("Template resolution failed: slug={}, attempted languages=[{}, {}]", slug, language, DEFAULT_LANGUAGE);
+        logger.error("Template resolution failed: slug={}, channel={}, attempted languages=[{}, {}]", slug, channel, language, DEFAULT_LANGUAGE);
         throw new TemplateNotFoundException(slug, language);
     }
 }

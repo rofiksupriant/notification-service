@@ -1,51 +1,68 @@
 spring:
   application:
-    name: notification-service
+    name: ${NOTIF_APP_NAME:notification-service}
   
   jpa:
     hibernate:
       ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        show_sql: false
+    show-sql: false
   
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
+    url: ${NOTIF_TEST_DB_URL:jdbc:h2:mem:testdb;MODE=PostgreSQL}
+    driver-class-name: ${NOTIF_TEST_DB_DRIVER:org.h2.Driver}
+    username: ${NOTIF_TEST_DB_USERNAME:sa}
+    password: ${NOTIF_TEST_DB_PASSWORD:}
     hikari:
-      maximum-pool-size: 2
+      maximum-pool-size: ${NOTIF_TEST_DB_HIKARI_MAX_POOL_SIZE:2}
   
   h2:
     console:
-      enabled: true
+      enabled: ${NOTIF_H2_CONSOLE_ENABLED:true}
   
   mail:
-    host: localhost
-    port: 1025
-    username: ""
-    password: ""
+    host: ${NOTIF_MAIL_HOST:smtp.gmail.com}
+    port: ${NOTIF_MAIL_PORT:587}
+    username: ${NOTIF_MAIL_USERNAME:test@example.com}
+    password: ${NOTIF_MAIL_PASSWORD:test-password}
     properties:
-      mail.smtp.auth: false
-      mail.smtp.starttls.enable: false
+      mail.smtp.auth: ${NOTIF_MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${NOTIF_MAIL_SMTP_STARTTLS_ENABLE:true}
+      mail.smtp.starttls.required: ${NOTIF_MAIL_SMTP_STARTTLS_REQUIRED:true}
+      mail.smtp.connectiontimeout: ${NOTIF_MAIL_SMTP_CONNECTION_TIMEOUT:5000}
+      mail.smtp.timeout: ${NOTIF_MAIL_SMTP_TIMEOUT:10000}
+      mail.smtp.writetimeout: ${NOTIF_MAIL_SMTP_WRITE_TIMEOUT:10000}
 
   task:
     execution:
       pool:
-        core-size: 2
-        max-size: 2
+        core-size: ${NOTIF_TASK_EXECUTION_CORE_SIZE:2}
+        max-size: ${NOTIF_TASK_EXECUTION_MAX_SIZE:2}
 
   flyway:
-    enabled: false
+    enabled: ${NOTIF_FLYWAY_ENABLED:false}
 
 app:
   feature:
     rabbitmq:
-      enabled: true
+      enabled: ${NOTIF_RABBITMQ_ENABLED:true}
 
 api:
   key:
     secret: test-api-key
 
+watzap:
+  api-key: ${NOTIF_WATZAP_API_KEY:test-api-key}
+  number-key: ${NOTIF_WATZAP_NUMBER_KEY:test-number-key}
+  base-url: ${NOTIF_WATZAP_BASE_URL:https://api.watzap.id/v1}
+  timeout:
+    connect-ms: ${NOTIF_WATZAP_TIMEOUT_CONNECT_MS:5000}
+    read-ms: ${NOTIF_WATZAP_TIMEOUT_READ_MS:10000}
+
 logging:
   level:
-    root: INFO
-    com.vibe.notification: DEBUG
+    root: ${NOTIF_LOGGING_LEVEL_ROOT:INFO}
+    com.vibe.notification: ${NOTIF_LOGGING_LEVEL_APP:DEBUG}

@@ -3,8 +3,8 @@ package com.vibe.notification.presentation.controller;
 import com.vibe.notification.application.dto.CreateTemplateRequest;
 import com.vibe.notification.application.dto.TemplateResponse;
 import com.vibe.notification.application.dto.UpdateTemplateRequest;
-import com.vibe.notification.infrastructure.adapter.TemplateManagementAdapter;
-import com.vibe.notification.infrastructure.adapter.security.ApiKeyValidator;
+import com.vibe.notification.application.port.TemplateManagementPort;
+import com.vibe.notification.application.port.ApiKeyValidationPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -30,14 +30,14 @@ public class TemplateController {
     private static final Logger logger = LoggerFactory.getLogger(TemplateController.class);
     private static final String API_KEY_HEADER = "X-API-Key";
 
-    private final TemplateManagementAdapter templateManagementAdapter;
-    private final ApiKeyValidator apiKeyValidator;
+    private final TemplateManagementPort templateManagementPort;
+    private final ApiKeyValidationPort apiKeyValidationPort;
 
     public TemplateController(
-        TemplateManagementAdapter templateManagementAdapter,
-        ApiKeyValidator apiKeyValidator) {
-        this.templateManagementAdapter = templateManagementAdapter;
-        this.apiKeyValidator = apiKeyValidator;
+        TemplateManagementPort templateManagementPort,
+        ApiKeyValidationPort apiKeyValidationPort) {
+        this.templateManagementPort = templateManagementPort;
+        this.apiKeyValidationPort = apiKeyValidationPort;
     }
 
     /**
@@ -69,55 +69,58 @@ public class TemplateController {
         logger.info("Received template creation request: slug={}, language={}", 
             request.slug(), request.language());
 
-        if (!apiKeyValidator.validateApiKey(apiKey)) {
+        if (!apiKeyValidationPort.validateApiKey(apiKey)) {
             logger.warn("Template creation rejected: unauthorized API key");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        var response = templateManagementAdapter.createTemplate(request);
+        var response = templateManagementPort.createTemplate(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
-     * Fetch a specific template by slug and language
-     * GET /api/v1/templates/{slug}/{lang}
+     * Fetch a specific template by slug, language, and channel
+     * GET /api/v1/templates/{slug}/{lang}/{channel}
      *
      * @param slug the template slug
      * @param lang the template language
+     * @param channel the notification channel
      * @return the template response
      */
-    @GetMapping("/{slug}/{lang}")
+    @GetMapping("/{slug}/{lang}/{channel}")
     @Operation(summary = "Retrieve a template", 
-               description = "Fetches a specific notification template by slug and language code. " +
+               description = "Fetches a specific notification template by slug, language code, and channel. " +
                        "This endpoint does not require authentication and is suitable for read-only access. " +
                        "Returns complete template metadata including creation and modification timestamps.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Template retrieved successfully with all details",
                      content = @Content(schema = @Schema(implementation = TemplateResponse.class))),
-        @ApiResponse(responseCode = "404", description = "Template not found - No template exists with the specified slug and language combination"),
-        @ApiResponse(responseCode = "400", description = "Invalid parameters - Slug or language format is invalid")
+        @ApiResponse(responseCode = "404", description = "Template not found - No template exists with the specified slug, language, and channel combination"),
+        @ApiResponse(responseCode = "400", description = "Invalid parameters - Slug, language, or channel format is invalid")
     })
     public ResponseEntity<TemplateResponse> getTemplate(
         @PathVariable @Parameter(description = "Template slug identifier (alphanumeric with underscores)", example = "welcome_email") String slug,
-        @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang) {
+        @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang,
+        @PathVariable @Parameter(description = "Notification channel (email, whatsapp, sms)", example = "email") String channel) {
         
-        logger.debug("Received template fetch request: slug={}, language={}", slug, lang);
+        logger.debug("Received template fetch request: slug={}, language={}, channel={}", slug, lang, channel);
 
-        var response = templateManagementAdapter.getTemplate(slug, lang);
+        var response = templateManagementPort.getTemplate(slug, lang, channel);
         return ResponseEntity.ok(response);
     }
 
     /**
      * Update an existing template
-     * PUT /api/v1/templates/{slug}/{lang}
+     * PUT /api/v1/templates/{slug}/{lang}/{channel}
      *
      * @param slug the template slug
      * @param lang the template language
+     * @param channel the notification channel
      * @param request the template update request
      * @param apiKey the API key for authorization
      * @return the updated template response
      */
-    @PutMapping("/{slug}/{lang}")
+    @PutMapping("/{slug}/{lang}/{channel}")
     @Operation(summary = "Update an existing template", 
                description = "Updates an existing notification template with new subject and/or body content. " +
                        "Partial updates are supported - only provided fields will be updated. " +
@@ -128,36 +131,38 @@ public class TemplateController {
                      content = @Content(schema = @Schema(implementation = TemplateResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid request body - Empty update payload or invalid field values"),
         @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid, missing, or expired API Key"),
-        @ApiResponse(responseCode = "404", description = "Template not found - No template exists with the specified slug and language combination"),
+        @ApiResponse(responseCode = "404", description = "Template not found - No template exists with the specified slug, language, and channel combination"),
         @ApiResponse(responseCode = "422", description = "Unprocessable Entity - Validation failed for updated fields")
     })
     public ResponseEntity<TemplateResponse> updateTemplate(
         @PathVariable @Parameter(description = "Template slug identifier (alphanumeric with underscores)", example = "welcome_email") String slug,
         @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang,
+        @PathVariable @Parameter(description = "Notification channel (email, whatsapp, sms)", example = "email") String channel,
         @org.springframework.web.bind.annotation.RequestBody UpdateTemplateRequest request,
         @RequestHeader(API_KEY_HEADER) @Parameter(description = "Valid API Key for authentication", required = true) String apiKey) {
         
-        logger.info("Received template update request: slug={}, language={}", slug, lang);
+        logger.info("Received template update request: slug={}, language={}, channel={}", slug, lang, channel);
 
-        if (!apiKeyValidator.validateApiKey(apiKey)) {
+        if (!apiKeyValidationPort.validateApiKey(apiKey)) {
             logger.warn("Template update rejected: unauthorized API key");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        var response = templateManagementAdapter.updateTemplate(slug, lang, request);
+        var response = templateManagementPort.updateTemplate(slug, lang, channel, request);
         return ResponseEntity.ok(response);
     }
 
     /**
      * Delete a template
-     * DELETE /api/v1/templates/{slug}/{lang}
+     * DELETE /api/v1/templates/{slug}/{lang}/{channel}
      *
      * @param slug the template slug
      * @param lang the template language
+     * @param channel the notification channel
      * @param apiKey the API key for authorization
      * @return 204 No Content response
      */
-    @DeleteMapping("/{slug}/{lang}")
+    @DeleteMapping("/{slug}/{lang}/{channel}")
     @Operation(summary = "Delete a template", 
                description = "Permanently deletes a notification template. This operation is irreversible. " +
                        "Once deleted, the template cannot be recovered unless restored from backups. " +
@@ -166,22 +171,23 @@ public class TemplateController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Template deleted successfully. Returns empty body."),
         @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid, missing, or expired API Key"),
-        @ApiResponse(responseCode = "404", description = "Template not found - No template exists with the specified slug and language combination"),
+        @ApiResponse(responseCode = "404", description = "Template not found - No template exists with the specified slug, language, and channel combination"),
         @ApiResponse(responseCode = "409", description = "Conflict - Template is currently in use by active notifications")
     })
     public ResponseEntity<Void> deleteTemplate(
         @PathVariable @Parameter(description = "Template slug identifier (alphanumeric with underscores)", example = "welcome_email") String slug,
         @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang,
+        @PathVariable @Parameter(description = "Notification channel (email, whatsapp, sms)", example = "email") String channel,
         @RequestHeader(API_KEY_HEADER) @Parameter(description = "Valid API Key for authentication", required = true) String apiKey) {
         
-        logger.info("Received template deletion request: slug={}, language={}", slug, lang);
+        logger.info("Received template deletion request: slug={}, language={}, channel={}", slug, lang, channel);
 
-        if (!apiKeyValidator.validateApiKey(apiKey)) {
+        if (!apiKeyValidationPort.validateApiKey(apiKey)) {
             logger.warn("Template deletion rejected: unauthorized API key");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        templateManagementAdapter.deleteTemplate(slug, lang);
+        templateManagementPort.deleteTemplate(slug, lang, channel);
         return ResponseEntity.noContent().build();
     }
 }

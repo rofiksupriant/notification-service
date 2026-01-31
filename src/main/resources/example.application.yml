@@ -15,8 +15,8 @@ spring:
   
   datasource:
     url: jdbc:postgresql://localhost:5432/notif_db
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${NOTIF_DB_USERNAME:postgres}
+    password: ${NOTIF_DB_PASSWORD:postgres}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -29,8 +29,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${NOTIF_MAIL_USERNAME}
+    password: ${NOTIF_MAIL_PASSWORD}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -51,10 +51,10 @@ spring:
 
 # RabbitMQ Configuration for Asynchronous Message Processing
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    host: ${NOTIF_RABBITMQ_HOST:localhost}
+    port: ${NOTIF_RABBITMQ_PORT:5672}
+    username: ${NOTIF_RABBITMQ_USERNAME:guest}
+    password: ${NOTIF_RABBITMQ_PASSWORD:guest}
     virtual-host: /
     connection-timeout: 10000
     listener:
@@ -67,17 +67,17 @@ spring:
 
 api:
   key:
-    secret: ${API_KEY_SECRET}
+    secret: ${NOTIF_API_SECRET}
 
 # Feature Toggles
 app:
   feature:
     rabbitmq:
-      enabled: ${RABBITMQ_ENABLED:false}
+      enabled: ${NOTIF_RABBITMQ_ENABLED:false}
 
 watzap:
-  api-key: ${WATZAP_API_KEY}
-  number-key: ${WATZAP_NUMBER_KEY}
+  api-key: ${NOTIF_WATZAP_API_KEY}
+  number-key: ${NOTIF_WATZAP_NUMBER_KEY}
   base-url: https://api.watzap.id/v1
   timeout:
     connect-ms: 5000
@@ -101,3 +101,16 @@ management:
   endpoint:
     health:
       show-details: always
+# SpringDoc OpenAPI Configuration
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    displayOperationId: false
+    deepLinking: true
+  api-docs:
+    path: /v3/api-docs
+  show-actuator: false
+  use-fqn-for-parameter-name: true

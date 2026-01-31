@@ -1,0 +1,117 @@
+spring:
+  application:
+    name: ${NOTIF_APP_NAME:notification-service}
+  
+  jpa:
+    hibernate:
+      ddl-auto: ${NOTIF_JPA_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: ${NOTIF_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+        jdbc:
+          batch_size: ${NOTIF_HIBERNATE_BATCH_SIZE:10}
+        order_inserts: ${NOTIF_HIBERNATE_ORDER_INSERTS:true}
+        order_updates: ${NOTIF_HIBERNATE_ORDER_UPDATES:true}
+  
+  datasource:
+    url: ${NOTIF_DB_URL:jdbc:postgresql://localhost:5432/notif_db}
+    username: ${NOTIF_DB_USERNAME:postgres}
+    password: ${NOTIF_DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: ${NOTIF_DB_HIKARI_MAX_POOL_SIZE:10}
+      minimum-idle: ${NOTIF_DB_HIKARI_MIN_IDLE:5}
+  
+  flyway:
+    enabled: ${NOTIF_FLYWAY_ENABLED:true}
+    locations: ${NOTIF_FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: ${NOTIF_FLYWAY_BASELINE_ON_MIGRATE:true}
+  
+  mail:
+    host: ${NOTIF_MAIL_HOST:smtp.gmail.com}
+    port: ${NOTIF_MAIL_PORT:587}
+    username: ${NOTIF_MAIL_USERNAME}
+    password: ${NOTIF_MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: ${NOTIF_MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${NOTIF_MAIL_SMTP_STARTTLS_ENABLE:true}
+      mail.smtp.starttls.required: ${NOTIF_MAIL_SMTP_STARTTLS_REQUIRED:true}
+      mail.smtp.connectiontimeout: ${NOTIF_MAIL_SMTP_CONNECTION_TIMEOUT:5000}
+      mail.smtp.timeout: ${NOTIF_MAIL_SMTP_TIMEOUT:10000}
+      mail.smtp.writetimeout: ${NOTIF_MAIL_SMTP_WRITE_TIMEOUT:10000}
+
+  task:
+    execution:
+      pool:
+        core-size: ${NOTIF_TASK_EXECUTION_CORE_SIZE:5}
+        max-size: ${NOTIF_TASK_EXECUTION_MAX_SIZE:10}
+        queue-capacity: ${NOTIF_TASK_EXECUTION_QUEUE_CAPACITY:100}
+    scheduling:
+      pool:
+        size: ${NOTIF_TASK_SCHEDULING_POOL_SIZE:2}
+  
+  # RabbitMQ Configuration for Asynchronous Message Processing
+  rabbitmq:
+    host: ${NOTIF_RABBITMQ_HOST:localhost}
+    port: ${NOTIF_RABBITMQ_PORT:5672}
+    username: ${NOTIF_RABBITMQ_USERNAME:guest}
+    password: ${NOTIF_RABBITMQ_PASSWORD:guest}
+    virtual-host: ${NOTIF_RABBITMQ_VIRTUAL_HOST:/}
+    connection-timeout: ${NOTIF_RABBITMQ_CONNECTION_TIMEOUT:10000}
+    listener:
+      simple:
+        concurrency: ${NOTIF_RABBITMQ_CONCURRENCY:3}
+        max-concurrency: ${NOTIF_RABBITMQ_MAX_CONCURRENCY:10}
+        prefetch: ${NOTIF_RABBITMQ_PREFETCH:1}
+        auto-startup: ${NOTIF_RABBITMQ_AUTO_STARTUP:true}
+        acknowledge-mode: ${NOTIF_RABBITMQ_ACKNOWLEDGE_MODE:AUTO}
+
+api:
+  key:
+    secret: ${NOTIF_API_SECRET}
+
+# Feature Toggles
+app:
+  feature:
+    rabbitmq:
+      enabled: ${NOTIF_RABBITMQ_ENABLED:true}
+
+watzap:
+  api-key: ${NOTIF_WATZAP_API_KEY}
+  number-key: ${NOTIF_WATZAP_NUMBER_KEY}
+  base-url: ${NOTIF_WATZAP_BASE_URL:https://api.watzap.id/v1}
+  timeout:
+    connect-ms: ${NOTIF_WATZAP_TIMEOUT_CONNECT_MS:5000}
+    read-ms: ${NOTIF_WATZAP_TIMEOUT_READ_MS:10000}
+
+logging:
+  level:
+    root: ${NOTIF_LOGGING_LEVEL_ROOT:INFO}
+    com.vibe.notification: ${NOTIF_LOGGING_LEVEL_APP:DEBUG}
+  pattern:
+    console: ${NOTIF_LOGGING_PATTERN_CONSOLE:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - [traceId=%X{traceId}] - %msg%n}
+    file: ${NOTIF_LOGGING_PATTERN_FILE:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - [traceId=%X{traceId}] - %msg%n}
+  file:
+    name: ${NOTIF_LOGGING_FILE_NAME:logs/notification-service.log}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${NOTIF_MANAGEMENT_ENDPOINTS:health,info,metrics,loggers}
+  endpoint:
+    health:
+      show-details: ${NOTIF_MANAGEMENT_HEALTH_DETAILS:always}
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  swagger-ui:
+    enabled: ${NOTIF_SWAGGER_ENABLED:true}
+    path: ${NOTIF_SWAGGER_PATH:/swagger-ui.html}
+    operationsSorter: ${NOTIF_SWAGGER_OPERATIONS_SORTER:method}
+    tagsSorter: ${NOTIF_SWAGGER_TAG_SORTER:alpha}
+    displayOperationId: ${NOTIF_SWAGGER_DISPLAY_OPERATION_ID:false}
+    deepLinking: ${NOTIF_SWAGGER_DEEP_LINKING:true}
+  api-docs:
+    path: ${NOTIF_SWAGGER_API_DOCS_PATH:/v3/api-docs}
+  show-actuator: ${NOTIF_SWAGGER_SHOW_ACTUATOR:false}
+  use-fqn-for-parameter-name: ${NOTIF_SWAGGER_USE_FQN_FOR_PARAMETER_NAME:true}

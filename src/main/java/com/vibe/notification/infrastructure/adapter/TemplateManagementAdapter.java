@@ -1,6 +1,7 @@
 package com.vibe.notification.infrastructure.adapter;
 
 import com.vibe.notification.application.dto.*;
+import com.vibe.notification.application.port.TemplateManagementPort;
 import com.vibe.notification.domain.exception.TemplateAlreadyExistsException;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
 import com.vibe.notification.domain.exception.TemplateValidationException;
@@ -13,12 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Adapter service for template management operations
+ * Adapter service implementing TemplateManagementPort
  * Handles CRUD operations for notification templates
  */
 @Service
 @Transactional
-public class TemplateManagementAdapter {
+public class TemplateManagementAdapter implements TemplateManagementPort {
     private static final Logger logger = LoggerFactory.getLogger(TemplateManagementAdapter.class);
 
     private final NotificationTemplateRepository templateRepository;
@@ -35,13 +36,14 @@ public class TemplateManagementAdapter {
      * @throws TemplateValidationException if validation fails
      * @throws TemplateAlreadyExistsException if template already exists
      */
+    @Override
     public TemplateResponse createTemplate(CreateTemplateRequest request) {
         logger.info("Creating new template: slug={}, language={}, channel={}", 
             request.slug(), request.language(), request.channel());
 
         validateCreateRequest(request);
 
-        var templateId = new NotificationTemplateId(request.slug(), request.language());
+        var templateId = new NotificationTemplateId(request.slug(), request.language(), request.channel());
 
         // Check if template already exists
         if (templateRepository.findById(templateId).isPresent()) {
@@ -50,7 +52,6 @@ public class TemplateManagementAdapter {
 
         var entity = new NotificationTemplateEntity(
             templateId,
-            request.channel(),
             request.templateType(),
             request.subject(),
             request.content(),
@@ -65,20 +66,20 @@ public class TemplateManagementAdapter {
     }
 
     /**
-     * Fetch a template by slug and language
+     * Fetch a template by slug, language, and channel
      *
      * @param slug the template slug
      * @param language the template language
+     * @param channel the notification channel
      * @return the template response
      * @throws TemplateNotFoundException if template is not found
-     */
-    @Transactional(readOnly = true)
-    public TemplateResponse getTemplate(String slug, String language) {
-        logger.debug("Fetching template: slug={}, language={}", slug, language);
+     */    @Override    @Transactional(readOnly = true)
+    public TemplateResponse getTemplate(String slug, String language, String channel) {
+        logger.debug("Fetching template: slug={}, language={}, channel={}", slug, language, channel);
 
         validateSlugAndLanguage(slug, language);
 
-        var templateId = new NotificationTemplateId(slug, language);
+        var templateId = new NotificationTemplateId(slug, language, channel);
         var entity = templateRepository.findById(templateId)
             .orElseThrow(() -> new TemplateNotFoundException(slug, language));
 
@@ -91,18 +92,20 @@ public class TemplateManagementAdapter {
      *
      * @param slug the template slug
      * @param language the template language
+     * @param channel the notification channel
      * @param request the update request
      * @return the updated template response
      * @throws TemplateNotFoundException if template is not found
      * @throws TemplateValidationException if validation fails
      */
-    public TemplateResponse updateTemplate(String slug, String language, UpdateTemplateRequest request) {
-        logger.info("Updating template: slug={}, language={}", slug, language);
+    @Override
+    public TemplateResponse updateTemplate(String slug, String language, String channel, UpdateTemplateRequest request) {
+        logger.info("Updating template: slug={}, language={}, channel={}", slug, language, channel);
 
         validateSlugAndLanguage(slug, language);
         validateUpdateRequest(request);
 
-        var templateId = new NotificationTemplateId(slug, language);
+        var templateId = new NotificationTemplateId(slug, language, channel);
         var entity = templateRepository.findById(templateId)
             .orElseThrow(() -> new TemplateNotFoundException(slug, language));
 
@@ -114,9 +117,12 @@ public class TemplateManagementAdapter {
         if (request.imageUrl() != null) {
             entity.setImageUrl(request.imageUrl());
         }
+        if (request.templateType() != null) {
+            entity.setTemplateType(request.templateType());
+        }
 
         var updatedEntity = templateRepository.save(entity);
-        logger.info("Template updated successfully: slug={}, language={}", slug, language);
+        logger.info("Template updated successfully: slug={}, language={}, channel={}", slug, language, channel);
 
         // Clear any caches if needed
         clearTemplateCache(slug, language);
@@ -125,23 +131,25 @@ public class TemplateManagementAdapter {
     }
 
     /**
-     * Delete a template by slug and language
+     * Delete a template by slug, language, and channel
      *
      * @param slug the template slug
      * @param language the template language
+     * @param channel the notification channel
      * @throws TemplateNotFoundException if template is not found
      */
-    public void deleteTemplate(String slug, String language) {
-        logger.info("Deleting template: slug={}, language={}", slug, language);
+    @Override
+    public void deleteTemplate(String slug, String language, String channel) {
+        logger.info("Deleting template: slug={}, language={}, channel={}", slug, language, channel);
 
         validateSlugAndLanguage(slug, language);
 
-        var templateId = new NotificationTemplateId(slug, language);
+        var templateId = new NotificationTemplateId(slug, language, channel);
         var entity = templateRepository.findById(templateId)
             .orElseThrow(() -> new TemplateNotFoundException(slug, language));
 
         templateRepository.delete(entity);
-        logger.info("Template deleted successfully: slug={}, language={}", slug, language);
+        logger.info("Template deleted successfully: slug={}, language={}, channel={}", slug, language, channel);
 
         // Clear any caches if needed
         clearTemplateCache(slug, language);

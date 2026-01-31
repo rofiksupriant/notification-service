@@ -4,10 +4,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import com.vibe.notification.application.NotificationApplicationService;
 import com.vibe.notification.application.dto.SendNotificationRequest;
+import com.vibe.notification.domain.service.TemplateResolutionService;
 
 /**
  * RabbitMQ listener for processing inbound notification requests.
@@ -15,27 +17,46 @@ import com.vibe.notification.application.dto.SendNotificationRequest;
  *
  * Features:
  * - Idempotent processing: Uses trace_id to prevent duplicate handling
+ * - Early template validation: Validates template existence BEFORE message acknowledgment
+ *   This enables RabbitMQ retry interceptor to catch exceptions and retry with exponential backoff
  * - Graceful error handling: Logs parsing errors without failing the consumer
  * - Conditional enablement: Only active when app.feature.rabbitmq.enabled=true
  *
- * This component automatically acknowledges messages after successful processing.
- * Failed messages can be requeued based on Spring AMQP configuration.
+ * Processing Flow:
+ * 1. Message received
+ * 2. Basic validation (required fields) → validation error = no retry
+ * 3. Idempotency check (trace_id already processed?) → skip if duplicate
+ * 4. Template validation (BEFORE acknowledgment) → template not found = RETRY
+ * 5. If template valid → message acknowledged → async processing spawned
+ * 6. [Async] Rendering, sending
+ *
+ * Retry Mechanism (uses existing RabbitMQ infrastructure):
+ * - Template not found → Exception thrown from listener
+ * - Retry interceptor catches exception
+ * - Exponential backoff: 1s, 2s, 4s (configured in RabbitMqConfiguration)
+ * - Max 4 attempts (1 initial + 3 retries)
+ * - After max retries → DlqMessageRecoverer sends to Dead Letter Queue
+ * - DLQ message includes error headers (x-last-error, x-last-error-timestamp)
  */
 @Component
 @ConditionalOnProperty(name = "app.feature.rabbitmq.enabled", havingValue = "true")
+@DependsOn({"rabbitQueueInitializer", "mainQueue", "deadLetterQueue", "deadLetterExchange"})
 public class NotificationRequestListener {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationRequestListener.class);
 
     private final NotificationApplicationService notificationApplicationService;
     private final ProcessedMessageRepository processedMessageRepository;
+    private final TemplateResolutionService templateResolutionService;
 
     public NotificationRequestListener(
         NotificationApplicationService notificationApplicationService,
-        ProcessedMessageRepository processedMessageRepository
+        ProcessedMessageRepository processedMessageRepository,
+        TemplateResolutionService templateResolutionService
     ) {
         this.notificationApplicationService = notificationApplicationService;
         this.processedMessageRepository = processedMessageRepository;
+        this.templateResolutionService = templateResolutionService;
     }
 
     /**
@@ -44,7 +65,7 @@ public class NotificationRequestListener {
      *
      * @param message the notification request message containing recipient, template slug, language, and variables
      */
-    @RabbitListener(queues = RabbitMqConfiguration.NOTIFICATION_REQUEST_QUEUE)
+    @RabbitListener(queues = RabbitMqConfiguration.NOTIFICATION_REQUEST)
     public void handleNotificationRequest(NotificationRequestMessage message) {
         try {
             // Validate incoming message (validation errors should not be retried)
@@ -61,6 +82,13 @@ public class NotificationRequestListener {
             logger.debug("Message with trace_id {} already processed, skipping", message.traceId());
             return;
         }
+
+        // Validate template existence BEFORE message acknowledgment
+        // This enables RabbitMQ retry interceptor to catch template-not-found exceptions
+        // and retry with exponential backoff (1s, 2s, 4s) using existing infrastructure
+        logger.debug("Validating template existence: slug={}, language={}, channel={}", message.slug(), message.language(), message.channel());
+        templateResolutionService.resolveTemplate(message.slug(), message.language(), message.channel());
+        logger.debug("Template validation passed for slug={}", message.slug());
 
         // Convert to application request and process
         // Use message's trace_id as idempotency key

@@ -25,6 +25,8 @@ public interface NotificationTemplateRepository extends JpaRepository<Notificati
 
     /**
      * Find templates by channel and type
+     * Channel is now part of the composite key (id.channel)
      */
+    @Query("SELECT t FROM NotificationTemplateEntity t WHERE t.id.channel = :channel AND t.templateType = :templateType")
     List<NotificationTemplateEntity> findByChannelAndTemplateType(String channel, String templateType);
 }

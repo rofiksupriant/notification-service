@@ -1,7 +1,8 @@
 package com.vibe.notification.infrastructure.adapter.email;
 
+import com.vibe.notification.application.port.EmailNotificationPort;
+import com.vibe.notification.domain.dto.TemplateDTO;
 import com.vibe.notification.domain.exception.NotificationException;
-import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
@@ -9,10 +10,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 /**
- * Email notification adapter using JavaMailSender
+ * Email notification adapter implementing EmailNotificationPort
  */
 @Component
-public class EmailNotificationAdapter {
+public class EmailNotificationAdapter implements EmailNotificationPort {
     private static final Logger logger = LoggerFactory.getLogger(EmailNotificationAdapter.class);
 
     private final JavaMailSender mailSender;
@@ -26,7 +27,8 @@ public class EmailNotificationAdapter {
     /**
      * Send email notification
      */
-    public void sendEmail(String recipient, NotificationTemplateEntity template, String renderedContent, String renderedSubject) {
+    @Override
+    public void sendEmail(String recipient, TemplateDTO template, String renderedSubject, String renderedContent) {
         try {
             logger.debug("Sending email to: {}", recipient);
 

@@ -6,5 +6,6 @@ package com.vibe.notification.application.dto;
 public record UpdateTemplateRequest(
     String content,
     String subject,
-    String imageUrl
+    String imageUrl,
+    String templateType
 ) {}

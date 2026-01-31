@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS notification_templates (
     image_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (slug, language)
+    PRIMARY KEY (slug, language, channel)
 );
 
 CREATE INDEX IF NOT EXISTS idx_templates_channel ON notification_templates(channel);

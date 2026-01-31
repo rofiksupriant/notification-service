@@ -1,19 +1,20 @@
 package com.vibe.notification.infrastructure.adapter.whatsapp;
 
+import com.vibe.notification.application.port.WhatsAppNotificationPort;
+import com.vibe.notification.domain.dto.TemplateDTO;
 import com.vibe.notification.domain.exception.NotificationException;
 import com.vibe.notification.domain.model.TemplateType;
 import com.vibe.notification.infrastructure.external.watzap.WatzapClient;
-import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * WhatsApp notification adapter using Watzap.id API
+ * WhatsApp notification adapter implementing WhatsAppNotificationPort
  * Supports both text and image messages
  */
 @Component
-public class WhatsAppNotificationAdapter {
+public class WhatsAppNotificationAdapter implements WhatsAppNotificationPort {
     private static final Logger logger = LoggerFactory.getLogger(WhatsAppNotificationAdapter.class);
 
     private final WatzapClient watzapClient;
@@ -25,11 +26,12 @@ public class WhatsAppNotificationAdapter {
     /**
      * Send WhatsApp notification
      */
-    public void sendWhatsAppMessage(String phoneNumber, NotificationTemplateEntity template, String renderedContent) {
+    @Override
+    public void sendWhatsAppMessage(String phoneNumber, TemplateDTO template, String renderedContent) {
         try {
             logger.debug("Sending WhatsApp message to: {}", phoneNumber);
 
-            var templateType = TemplateType.from(template.getTemplateType());
+            var templateType = TemplateType.from(template.getType());
 
             if (templateType == TemplateType.TEXT) {
                 sendTextMessage(phoneNumber, renderedContent);
@@ -48,14 +50,14 @@ public class WhatsAppNotificationAdapter {
 
     private void sendTextMessage(String phoneNumber, String message) {
         var response = watzapClient.sendTextMessage(phoneNumber, message);
-        if (!response.success()) {
+        if (!response.isSuccess()) {
             throw new NotificationException("Failed to send text message: " + response.message());
         }
     }
 
     private void sendImageMessage(String phoneNumber, String imageUrl, String caption) {
         var response = watzapClient.sendImageMessage(phoneNumber, imageUrl, caption);
-        if (!response.success()) {
+        if (!response.isSuccess()) {
             throw new NotificationException("Failed to send image message: " + response.message());
         }
     }

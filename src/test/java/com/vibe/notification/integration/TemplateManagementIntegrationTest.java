@@ -64,11 +64,11 @@ class TemplateManagementIntegrationTest {
             .andExpect(jsonPath("$.channel").value("EMAIL"));
 
         // 2. Verify template exists in database
-        var templateId = new NotificationTemplateId(slug, language);
+        var templateId = new NotificationTemplateId(slug, language, "EMAIL");
         assertTrue(templateRepository.findById(templateId).isPresent());
 
         // 3. Fetch template
-        mockMvc.perform(get(BASE_URL + "/" + slug + "/" + language))
+        mockMvc.perform(get(BASE_URL + "/" + slug + "/" + language + "/EMAIL"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.slug").value(slug))
             .andExpect(jsonPath("$.content").value("Hello [[${name}]], welcome!"))
@@ -78,10 +78,11 @@ class TemplateManagementIntegrationTest {
         var updateRequest = new UpdateTemplateRequest(
             "Updated content for [[${name}]]",
             "Updated Subject",
-            null
+            null,
+            "TEXT"
         );
 
-        mockMvc.perform(put(BASE_URL + "/" + slug + "/" + language)
+        mockMvc.perform(put(BASE_URL + "/" + slug + "/" + language + "/EMAIL")
                 .header(API_KEY_HEADER, VALID_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
@@ -96,7 +97,7 @@ class TemplateManagementIntegrationTest {
         assertEquals("Updated Subject", updatedTemplate.getSubject());
 
         // 6. Delete template
-        mockMvc.perform(delete(BASE_URL + "/" + slug + "/" + language)
+        mockMvc.perform(delete(BASE_URL + "/" + slug + "/" + language + "/EMAIL")
                 .header(API_KEY_HEADER, VALID_API_KEY))
             .andExpect(status().isNoContent());
 
@@ -104,7 +105,7 @@ class TemplateManagementIntegrationTest {
         assertTrue(templateRepository.findById(templateId).isEmpty());
 
         // 8. Verify fetch returns 404 after deletion
-        mockMvc.perform(get(BASE_URL + "/" + slug + "/" + language))
+        mockMvc.perform(get(BASE_URL + "/" + slug + "/" + language + "/EMAIL"))
             .andExpect(status().isNotFound());
     }
 
@@ -183,8 +184,8 @@ class TemplateManagementIntegrationTest {
             .andExpect(status().isCreated());
 
         // Attempt to update with wrong API key
-        var updateRequest = new UpdateTemplateRequest("Updated", "Updated", null);
-        mockMvc.perform(put(BASE_URL + "/" + slug + "/" + language)
+        var updateRequest = new UpdateTemplateRequest("Updated", "Updated", null, "TEXT");
+        mockMvc.perform(put(BASE_URL + "/" + slug + "/" + language + "/EMAIL")
                 .header(API_KEY_HEADER, "wrong-key")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
@@ -215,12 +216,12 @@ class TemplateManagementIntegrationTest {
             .andExpect(status().isCreated());
 
         // Attempt to delete with wrong API key
-        mockMvc.perform(delete(BASE_URL + "/" + slug + "/" + language)
+        mockMvc.perform(delete(BASE_URL + "/" + slug + "/" + language + "/EMAIL")
                 .header(API_KEY_HEADER, "wrong-key"))
             .andExpect(status().isUnauthorized());
 
         // Verify template still exists
-        var templateId = new NotificationTemplateId(slug, language);
+        var templateId = new NotificationTemplateId(slug, language, "EMAIL");
         assertTrue(templateRepository.findById(templateId).isPresent());
     }
 
@@ -285,12 +286,12 @@ class TemplateManagementIntegrationTest {
             .andExpect(status().isCreated());
 
         // Verify both versions exist
-        mockMvc.perform(get(BASE_URL + "/" + slug + "/en"))
+        mockMvc.perform(get(BASE_URL + "/" + slug + "/en/EMAIL"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.language").value("en"))
             .andExpect(jsonPath("$.subject").value("English Subject"));
 
-        mockMvc.perform(get(BASE_URL + "/" + slug + "/id"))
+        mockMvc.perform(get(BASE_URL + "/" + slug + "/id/EMAIL"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.language").value("id"))
             .andExpect(jsonPath("$.subject").value("Subject Indonesia"));
