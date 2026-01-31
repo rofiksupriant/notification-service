@@ -1,7 +1,6 @@
 package com.vibe.notification.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vibe.notification.domain.model.TemplateType;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.NotificationRequestMessage;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.RabbitMqConfiguration;
@@ -9,7 +8,6 @@ import com.vibe.notification.infrastructure.persistence.entity.NotificationTempl
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
 import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
