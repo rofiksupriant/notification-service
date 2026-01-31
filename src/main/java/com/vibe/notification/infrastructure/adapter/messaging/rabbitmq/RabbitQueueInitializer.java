@@ -27,7 +27,7 @@ public class RabbitQueueInitializer {
         RabbitMqConfiguration.NOTIFICATION_DL
     };
 
-    public RabbitQueueInitializer(RabbitAdmin rabbitAdmin) {
+    RabbitQueueInitializer(RabbitAdmin rabbitAdmin) {
         logger.info("Initializing RabbitMQ queue cleanup...");
         
         // Delete old queue versions

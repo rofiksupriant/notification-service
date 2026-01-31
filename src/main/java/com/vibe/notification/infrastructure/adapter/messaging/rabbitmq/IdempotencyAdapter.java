@@ -40,7 +40,6 @@ public class IdempotencyAdapter implements IdempotencyPort {
             logger.info("Message marked as processed: {}", messageId);
         } catch (Exception e) {
             logger.error("Failed to mark message as processed: {}", messageId, e);
-            throw new RuntimeException("Failed to mark message as processed: " + e.getMessage(), e);
         }
     }
 }

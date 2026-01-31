@@ -146,6 +146,7 @@ public class NotificationApplicationService {
             switch (request.channel()) {
                 case EMAIL -> emailNotificationPort.sendEmail(request.recipient(), template, renderedSubject, renderedContent);
                 case WHATSAPP -> whatsAppNotificationPort.sendWhatsAppMessage(request.recipient(), template, renderedContent);
+                default -> logger.error("Notification processing failed: logId={}, error={}", logId, "Unsupported channel: " + request.channel());
             }
 
             // Mark as successfully sent

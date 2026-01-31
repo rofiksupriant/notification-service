@@ -73,8 +73,7 @@ public class NotificationRequestListener {
         } catch (IllegalArgumentException e) {
             // Validation errors are client errors - log and skip retry
             logger.error("Validation error processing message with trace_id {}: {}", message.traceId(), e.getMessage());
-            throw new org.springframework.amqp.AmqpRejectAndDontRequeueException(
-                "Validation failed: " + e.getMessage(), e);
+            throw new org.springframework.amqp.AmqpRejectAndDontRequeueException("Validation failed: " + e.getMessage(), e);
         }
         
         // Check if message has already been processed using trace_id

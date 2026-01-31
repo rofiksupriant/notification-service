@@ -29,20 +29,16 @@ public class NotificationHealthIndicator implements HealthIndicator {
         // Check Database
         var dbHealth = checkDatabase();
         if (dbHealth.getStatus().equals("UP")) {
-            builder.withDetail("database", "PostgreSQL connection OK");
+            builder.withDetail("database", dbHealth.getMessage());
         } else {
             return Health.down()
-                    .withDetail("database", "PostgreSQL connection FAILED")
+                    .withDetail("database", dbHealth.getMessage())
                     .build();
         }
 
         // Check Mail Server
         var mailHealth = checkMailServer();
-        if (mailHealth.getStatus().equals("UP")) {
-            builder.withDetail("mail", "SMTP connection OK");
-        } else {
-            builder.withDetail("mail", "SMTP not available");
-        }
+        builder.withDetail("mail", mailHealth.getMessage());
 
         return builder.build();
     }
@@ -78,13 +74,19 @@ public class NotificationHealthIndicator implements HealthIndicator {
 
     private static class HealthCheckResult {
         private final String status;
-
+        private final String message;
+        
         HealthCheckResult(String status, String message) {
             this.status = status;
+            this.message = message;
         }
-
+        
         String getStatus() {
             return status;
+        }
+
+        public String getMessage() {
+            return message;
         }
     }
 }
