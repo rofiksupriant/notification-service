@@ -1,5 +1,6 @@
 package com.vibe.notification.infrastructure.persistence.entity;
 
+import com.vibe.notification.domain.model.Channel;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -54,7 +55,7 @@ public class NotificationTemplateEntity {
         this.id = id;
     }
 
-    public String getChannel() {
+    public Channel getChannel() {
         return id != null ? id.getChannel() : null;
     }
 

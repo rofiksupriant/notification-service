@@ -1,6 +1,7 @@
 package com.vibe.notification.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.NotificationRequestMessage;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.RabbitMqConfiguration;
@@ -58,7 +59,7 @@ class RetryAndDlqIntegrationTest {
         templateRepository.deleteAll();
         
         // Create test templates for successful processing tests - EMAIL
-        NotificationTemplateId emailTemplateId = new NotificationTemplateId("welcome-template", "en", "EMAIL");
+        NotificationTemplateId emailTemplateId = new NotificationTemplateId("welcome-template", "en", Channel.EMAIL);
         NotificationTemplateEntity emailTemplate = new NotificationTemplateEntity();
         emailTemplate.setId(emailTemplateId);
         emailTemplate.setTemplateType("TEXT");
@@ -67,7 +68,7 @@ class RetryAndDlqIntegrationTest {
         templateRepository.save(emailTemplate);
         
         // Create test templates for successful processing tests - WHATSAPP
-        NotificationTemplateId waTemplateId = new NotificationTemplateId("welcome-template", "en", "WHATSAPP");
+        NotificationTemplateId waTemplateId = new NotificationTemplateId("welcome-template", "en", Channel.WHATSAPP);
         NotificationTemplateEntity waTemplate = new NotificationTemplateEntity();
         waTemplate.setId(waTemplateId);
         waTemplate.setTemplateType("TEXT");
@@ -101,7 +102,7 @@ class RetryAndDlqIntegrationTest {
                 "rofik@newtronic-solution.com",
                 "welcome-template",
                 "en",
-                "EMAIL",
+                Channel.EMAIL,
                 variables
         );
 
@@ -135,7 +136,7 @@ class RetryAndDlqIntegrationTest {
                 "rofik@newtronic-solution.com",
                 "non-existent-template",  // This will cause failures
                 "en",
-                "EMAIL",
+                Channel.EMAIL,
                 variables
         );
 
@@ -175,7 +176,7 @@ class RetryAndDlqIntegrationTest {
                 "invalid@example.com",
                 "non-existent-template",
                 "en",
-                "EMAIL",
+                Channel.EMAIL,
                 variables
         );
 
@@ -217,7 +218,7 @@ class RetryAndDlqIntegrationTest {
                 "rofik@newtronic-solution.com",
                 "non-existent-template",
                 "en",
-                "EMAIL",
+                Channel.EMAIL,
                 variables
         );
 

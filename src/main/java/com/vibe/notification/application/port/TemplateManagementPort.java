@@ -3,6 +3,7 @@ package com.vibe.notification.application.port;
 import com.vibe.notification.application.dto.CreateTemplateRequest;
 import com.vibe.notification.application.dto.TemplateResponse;
 import com.vibe.notification.application.dto.UpdateTemplateRequest;
+import com.vibe.notification.domain.model.Channel;
 
 /**
  * Port interface for template management operations
@@ -25,7 +26,7 @@ public interface TemplateManagementPort {
      * @param channel the notification channel
      * @return the template response
      */
-    TemplateResponse getTemplate(String slug, String language, String channel);
+    TemplateResponse getTemplate(String slug, String language, Channel channel);
 
     /**
      * Update an existing template
@@ -36,7 +37,7 @@ public interface TemplateManagementPort {
      * @param request the update request
      * @return the updated template response
      */
-    TemplateResponse updateTemplate(String slug, String language, String channel, UpdateTemplateRequest request);
+    TemplateResponse updateTemplate(String slug, String language, Channel channel, UpdateTemplateRequest request);
 
     /**
      * Delete a template
@@ -45,5 +46,5 @@ public interface TemplateManagementPort {
      * @param language the template language
      * @param channel the notification channel
      */
-    void deleteTemplate(String slug, String language, String channel);
+    void deleteTemplate(String slug, String language, Channel channel);
 }

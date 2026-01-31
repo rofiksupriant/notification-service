@@ -1,5 +1,6 @@
 package com.vibe.notification.domain.dto;
 
+import com.vibe.notification.domain.model.Channel;
 import java.time.LocalDateTime;
 
 /**
@@ -10,7 +11,7 @@ public class TemplateDTO {
     private final TemplateIdDTO id;
     private final String slug;
     private final String language;
-    private final String channel;
+    private final Channel channel;
     private final String type;
     private final String subject;
     private final String content;
@@ -22,7 +23,7 @@ public class TemplateDTO {
             TemplateIdDTO id,
             String slug,
             String language,
-            String channel,
+            Channel channel,
             String type,
             String subject,
             String content,
@@ -53,7 +54,7 @@ public class TemplateDTO {
         return language;
     }
 
-    public String getChannel() {
+    public Channel getChannel() {
         return channel;
     }
 

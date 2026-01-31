@@ -41,7 +41,6 @@ public class EmailNotificationAdapter implements EmailNotificationPort {
             mailSender.send(message);
             logger.info("Email sent successfully to: {}", recipient);
         } catch (Exception e) {
-            logger.error("Failed to send email to {}: {}", recipient, e.getMessage());
             throw new NotificationException("Failed to send email: " + e.getMessage(), e);
         }
     }

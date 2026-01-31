@@ -34,14 +34,13 @@ public class WhatsAppNotificationAdapter implements WhatsAppNotificationPort {
             var templateType = TemplateType.from(template.getType());
 
             switch (templateType) {
-              case TemplateType.TEXT -> sendTextMessage(phoneNumber, renderedContent);
-              case TemplateType.IMAGE -> sendImageMessage(phoneNumber, template.getImageUrl(), renderedContent);
-              default -> throw new NotificationException("Unsupported template type: " + templateType);
+                case TemplateType.TEXT -> sendTextMessage(phoneNumber, renderedContent);
+                case TemplateType.IMAGE -> sendImageMessage(phoneNumber, template.getImageUrl(), renderedContent);
+                default -> throw new NotificationException("Unsupported template type: " + templateType);
             }
 
             logger.info("WhatsApp message sent successfully to: {}", phoneNumber);
         } catch (Exception e) {
-            logger.error("Failed to send WhatsApp message to {}: {}", phoneNumber, e.getMessage());
             throw new NotificationException("Failed to send WhatsApp message: " + e.getMessage(), e);
         }
     }

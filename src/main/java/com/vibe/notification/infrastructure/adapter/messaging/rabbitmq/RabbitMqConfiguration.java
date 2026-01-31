@@ -14,20 +14,21 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * RabbitMQ configuration for inbound notification requests with retry mechanism and DLQ support.
+ * RabbitMQ configuration for inbound notification requests with retry mechanism
+ * and DLQ support.
  * Configures the queue, DLQ, and retry policy for resilient message processing.
  *
  * Features:
- * - Exponential backoff retry (1s, 2s, 4s) across 4 total attempts (1 initial + 3 retries)
+ * - Exponential backoff retry (1s, 2s, 4s) across 4 total attempts (1 initial +
+ * 3 retries)
  * - Dead Letter Queue (DLQ) for failed messages
- * - Differentiation between transient errors (retryable) and validation errors (non-retryable)
+ * - Differentiation between transient errors (retryable) and validation errors
+ * (non-retryable)
  *
  * This configuration is conditionally enabled via the feature toggle:
  * {@code app.feature.rabbitmq.enabled=true}
@@ -35,8 +36,7 @@ import java.util.Map;
 @Configuration
 @ConditionalOnProperty(name = "app.feature.rabbitmq.enabled", havingValue = "true")
 public class RabbitMqConfiguration {
-    private static final Logger logger = LoggerFactory.getLogger(RabbitMqConfiguration.class);
-    
+
     public static final String NOTIFICATION_REQUEST = "notification.request";
     public static final String NOTIFICATION_DL = "notification.dl";
 
@@ -49,20 +49,6 @@ public class RabbitMqConfiguration {
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
         return new RabbitAdmin(connectionFactory);
-    }
-
-    /**
-     * Initializer bean that cleans up old queues (v1, v2) on startup.
-     * Ensures fresh queue creation with correct DLX configuration.
-     * 
-     * This prevents PRECONDITION_FAILED errors when queue arguments change.
-     * Old queues are deleted only if they exist.
-     *
-     * @return initialization bean
-     */
-    @Bean
-    public RabbitQueueInitializer rabbitQueueInitializer(RabbitAdmin rabbitAdmin) {
-        return new RabbitQueueInitializer(rabbitAdmin);
     }
 
     /**
@@ -85,9 +71,9 @@ public class RabbitMqConfiguration {
     @Bean
     public Queue mainQueue() {
         return QueueBuilder.durable(NOTIFICATION_REQUEST)
-            .withArgument("x-dead-letter-exchange", NOTIFICATION_DL)
-            .withArgument("x-dead-letter-routing-key", NOTIFICATION_DL)
-            .build();
+                .withArgument("x-dead-letter-exchange", NOTIFICATION_DL)
+                .withArgument("x-dead-letter-routing-key", NOTIFICATION_DL)
+                .build();
     }
 
     /**
@@ -161,14 +147,14 @@ public class RabbitMqConfiguration {
             ConnectionFactory connectionFactory,
             MessageConverter messageConverter,
             RabbitTemplate rabbitTemplate) {
-        
+
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
-        
+
         // Configure retry interceptor
         factory.setAdviceChain(retryInterceptor(rabbitTemplate));
-        
+
         return factory;
     }
 
@@ -179,31 +165,31 @@ public class RabbitMqConfiguration {
      */
     private org.aopalliance.intercept.MethodInterceptor retryInterceptor(RabbitTemplate rabbitTemplate) {
         RetryTemplate retryTemplate = new RetryTemplate();
-        
+
         // Exponential backoff: 1s, 2s, 4s
         ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
-        backOffPolicy.setInitialInterval(1000L);  // 1 second
-        backOffPolicy.setMultiplier(2.0);          // Double each time
-        backOffPolicy.setMaxInterval(4000L);       // Max 4 seconds
+        backOffPolicy.setInitialInterval(1000L); // 1 second
+        backOffPolicy.setMultiplier(2.0); // Double each time
+        backOffPolicy.setMaxInterval(4000L); // Max 4 seconds
         retryTemplate.setBackOffPolicy(backOffPolicy);
-        
-        // Max 4 attempts total (1 initial + 3 retries) to achieve 1s, 2s, 4s backoff sequence
+
+        // Max 4 attempts total (1 initial + 3 retries) to achieve 1s, 2s, 4s backoff
+        // sequence
         // Don't retry validation errors (AmqpRejectAndDontRequeueException)
         Map<Class<? extends Throwable>, Boolean> retryableExceptions = new HashMap<>();
         retryableExceptions.put(Exception.class, true);
         retryableExceptions.put(org.springframework.amqp.AmqpRejectAndDontRequeueException.class, false);
-        
+
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(4, retryableExceptions);
         retryTemplate.setRetryPolicy(retryPolicy);
-        
+
         // Custom message recoverer that adds error headers to DLQ messages
         DlqMessageRecoverer messageRecoverer = new DlqMessageRecoverer(
-            rabbitTemplate,
-            NOTIFICATION_DL,
-            NOTIFICATION_DL,
-            NOTIFICATION_REQUEST
-        );
-        
+                rabbitTemplate,
+                NOTIFICATION_DL,
+                NOTIFICATION_DL,
+                NOTIFICATION_REQUEST);
+
         return org.springframework.amqp.rabbit.config.RetryInterceptorBuilder
                 .stateless()
                 .retryOperations(retryTemplate)
@@ -211,4 +197,3 @@ public class RabbitMqConfiguration {
                 .build();
     }
 }
-

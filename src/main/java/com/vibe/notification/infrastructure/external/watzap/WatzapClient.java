@@ -28,9 +28,9 @@ public class WatzapClient {
     public WatzapClient(WebClient.Builder webClientBuilder, WatzapProperties watzapProperties) {
         this.watzapProperties = watzapProperties;
         this.webClient = webClientBuilder
-            .baseUrl(watzapProperties.getBaseUrl())
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .build();
+                .baseUrl(watzapProperties.getBaseUrl())
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
     }
 
     /**
@@ -76,18 +76,17 @@ public class WatzapClient {
         try {
             logger.debug("Sending request to Watzap API: endpoint={}, body={}", endpoint, requestBody);
             return webClient.post()
-                .uri(endpoint)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(WatzapResponse.class)
-                .timeout(Duration.ofMillis(watzapProperties.getTimeout().getReadMs()))
-                .retryWhen(Retry.backoff(2, Duration.ofMillis(500)))
-                .block();
+                    .uri(endpoint)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(WatzapResponse.class)
+                    .timeout(Duration.ofMillis(watzapProperties.getTimeout().getReadMs()))
+                    .retryWhen(Retry.backoff(2, Duration.ofMillis(500)))
+                    .block();
         } catch (WebClientResponseException e) {
-            logger.error("Watzap API error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new NotificationException("Watzap API error: " + e.getMessage(), e);
+            throw new NotificationException(
+                    "Watzap API error: " + e.getStatusCode() + " " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            logger.error("Failed to send request to Watzap API", e);
             throw new NotificationException("Watzap API call failed: " + e.getMessage(), e);
         }
     }

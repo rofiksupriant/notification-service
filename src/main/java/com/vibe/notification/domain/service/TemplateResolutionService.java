@@ -3,6 +3,7 @@ package com.vibe.notification.domain.service;
 import com.vibe.notification.domain.dto.TemplateDTO;
 import com.vibe.notification.domain.dto.TemplateIdDTO;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.domain.port.NotificationTemplatePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,7 @@ public class TemplateResolutionService {
      * Resolve template by slug, language, and channel with fallback logic
      * Fallback order: 1. requested language, 2. default 'en'
      */
-    public TemplateDTO resolveTemplate(String slug, String language, String channel) {
+    public TemplateDTO resolveTemplate(String slug, String language, Channel channel) {
         logger.debug("Resolving template: slug={}, language={}, channel={}", slug, language, channel);
 
         // Try requested language first

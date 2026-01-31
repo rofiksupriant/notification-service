@@ -1,5 +1,6 @@
 package com.vibe.notification.application.dto;
 
+import com.vibe.notification.domain.model.Channel;
 import java.time.LocalDateTime;
 
 /**
@@ -8,7 +9,7 @@ import java.time.LocalDateTime;
 public record TemplateResponse(
     String slug,
     String language,
-    String channel,
+    Channel channel,
     String templateType,
     String subject,
     String content,

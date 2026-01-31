@@ -1,6 +1,7 @@
 package com.vibe.notification.test.support;
 
 import com.vibe.notification.domain.dto.TemplateDTO;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.domain.dto.TemplateIdDTO;
 import java.time.LocalDateTime;
 
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 public class TemplateTestDataFactory {
     
     public static TemplateDTO createTemplateDTO(
-            String slug, String language, String channel,
+            String slug, String language, Channel channel,
             String subject, String content, String imageUrl) {
         LocalDateTime now = LocalDateTime.now();
         return new TemplateDTO(
@@ -28,7 +29,7 @@ public class TemplateTestDataFactory {
         );
     }
 
-    public static TemplateDTO createTemplateDTO(String slug, String language, String channel, String subject, String content) {
+    public static TemplateDTO createTemplateDTO(String slug, String language, Channel channel, String subject, String content) {
         return createTemplateDTO(slug, language, channel, subject, content, null);
     }
 }

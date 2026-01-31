@@ -5,6 +5,7 @@ import com.vibe.notification.application.dto.TemplateResponse;
 import com.vibe.notification.application.dto.UpdateTemplateRequest;
 import com.vibe.notification.application.port.TemplateManagementPort;
 import com.vibe.notification.application.port.ApiKeyValidationPort;
+import com.vibe.notification.domain.model.Channel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -101,11 +102,11 @@ public class TemplateController {
     public ResponseEntity<TemplateResponse> getTemplate(
         @PathVariable @Parameter(description = "Template slug identifier (alphanumeric with underscores)", example = "welcome_email") String slug,
         @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang,
-        @PathVariable @Parameter(description = "Notification channel (email, whatsapp, sms)", example = "email") String channel) {
+        @PathVariable @Parameter(description = "Notification channel (EMAIL, WHATSAPP)", example = "EMAIL") String channel) {
         
         logger.debug("Received template fetch request: slug={}, language={}, channel={}", slug, lang, channel);
 
-        var response = templateManagementPort.getTemplate(slug, lang, channel);
+        var response = templateManagementPort.getTemplate(slug, lang, Channel.valueOf(channel));
         return ResponseEntity.ok(response);
     }
 
@@ -137,7 +138,7 @@ public class TemplateController {
     public ResponseEntity<TemplateResponse> updateTemplate(
         @PathVariable @Parameter(description = "Template slug identifier (alphanumeric with underscores)", example = "welcome_email") String slug,
         @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang,
-        @PathVariable @Parameter(description = "Notification channel (email, whatsapp, sms)", example = "email") String channel,
+        @PathVariable @Parameter(description = "Notification channel (EMAIL, WHATSAPP)", example = "EMAIL") String channel,
         @org.springframework.web.bind.annotation.RequestBody UpdateTemplateRequest request,
         @RequestHeader(API_KEY_HEADER) @Parameter(description = "Valid API Key for authentication", required = true) String apiKey) {
         
@@ -148,7 +149,7 @@ public class TemplateController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        var response = templateManagementPort.updateTemplate(slug, lang, channel, request);
+        var response = templateManagementPort.updateTemplate(slug, lang, Channel.valueOf(channel), request);
         return ResponseEntity.ok(response);
     }
 
@@ -177,7 +178,7 @@ public class TemplateController {
     public ResponseEntity<Void> deleteTemplate(
         @PathVariable @Parameter(description = "Template slug identifier (alphanumeric with underscores)", example = "welcome_email") String slug,
         @PathVariable @Parameter(description = "ISO 639-1 language code", example = "en") String lang,
-        @PathVariable @Parameter(description = "Notification channel (email, whatsapp, sms)", example = "email") String channel,
+        @PathVariable @Parameter(description = "Notification channel (EMAIL, WHATSAPP)", example = "EMAIL") String channel,
         @RequestHeader(API_KEY_HEADER) @Parameter(description = "Valid API Key for authentication", required = true) String apiKey) {
         
         logger.info("Received template deletion request: slug={}, language={}, channel={}", slug, lang, channel);
@@ -187,7 +188,7 @@ public class TemplateController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        templateManagementPort.deleteTemplate(slug, lang, channel);
+        templateManagementPort.deleteTemplate(slug, lang, Channel.valueOf(channel));
         return ResponseEntity.noContent().build();
     }
 }

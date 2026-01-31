@@ -5,6 +5,7 @@ import com.vibe.notification.application.dto.UpdateTemplateRequest;
 import com.vibe.notification.domain.exception.TemplateAlreadyExistsException;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
 import com.vibe.notification.domain.exception.TemplateValidationException;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
 import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
@@ -43,41 +44,28 @@ class TemplateManagementAdapterTest {
     @BeforeEach
     void setUp() {
         // Setup EMAIL template
-        var emailTemplateId = new NotificationTemplateId("welcome", "en", "email");
+        var emailTemplateId = new NotificationTemplateId("welcome", "en", Channel.EMAIL);
         templateEntity = new NotificationTemplateEntity(
-            emailTemplateId,
-            "TEXT",
-            "Welcome to our service",
-            "Hello [[${name}]], welcome!",
-            null
-        );
-        
-        // Setup WHATSAPP template
-        var waTemplateId = new NotificationTemplateId("welcome", "en", "whatsapp");
-        var waTemplateEntity = new NotificationTemplateEntity(
-            waTemplateId,
-            "TEXT",
-            null,
-            "Hello [[${name}]], welcome via WhatsApp!",
-            null
-        );
+                emailTemplateId,
+                "TEXT",
+                "Welcome to our service",
+                "Hello [[${name}]], welcome!",
+                null);
 
         createRequest = new CreateTemplateRequest(
-            "welcome",
-            "en",
-            "EMAIL",
-            "Hello [[${name}]], welcome!",
-            "Welcome to our service",
-            null,
-            "TEXT"
-        );
+                "welcome",
+                "en",
+                Channel.EMAIL,
+                "Hello [[${name}]], welcome!",
+                "Welcome to our service",
+                null,
+                "TEXT");
 
         updateRequest = new UpdateTemplateRequest(
-            "Updated content [[${name}]]",
-            "Updated Subject",
-            null,
-            "TEXT"
-        );
+                "Updated content [[${name}]]",
+                "Updated Subject",
+                null,
+                "TEXT");
     }
 
     @Test
@@ -94,7 +82,7 @@ class TemplateManagementAdapterTest {
         assertNotNull(result);
         assertEquals("welcome", result.slug());
         assertEquals("en", result.language());
-        assertEquals("email", result.channel());
+        assertEquals(Channel.EMAIL, result.channel());
         assertEquals("TEXT", result.templateType());
         verify(templateRepository).save(any());
     }
@@ -106,9 +94,8 @@ class TemplateManagementAdapterTest {
         when(templateRepository.findById(any())).thenReturn(Optional.of(templateEntity));
 
         // When & Then
-        assertThrows(TemplateAlreadyExistsException.class, () ->
-            templateManagementAdapter.createTemplate(createRequest)
-        );
+        assertThrows(TemplateAlreadyExistsException.class,
+                () -> templateManagementAdapter.createTemplate(createRequest));
         verify(templateRepository, never()).save(any());
     }
 
@@ -117,19 +104,16 @@ class TemplateManagementAdapterTest {
     void shouldThrowValidationExceptionWhenSlugIsEmpty() {
         // Given
         var invalidRequest = new CreateTemplateRequest(
-            "",
-            "en",
-            "EMAIL",
-            "Content",
-            "Subject",
-            null,
-            "TEXT"
-        );
+                "",
+                "en",
+                Channel.EMAIL,
+                "Content",
+                "Subject",
+                null,
+                "TEXT");
 
         // When & Then
-        assertThrows(TemplateValidationException.class, () ->
-            templateManagementAdapter.createTemplate(invalidRequest)
-        );
+        assertThrows(TemplateValidationException.class, () -> templateManagementAdapter.createTemplate(invalidRequest));
     }
 
     @Test
@@ -137,76 +121,52 @@ class TemplateManagementAdapterTest {
     void shouldThrowValidationExceptionWhenLanguageIsEmpty() {
         // Given
         var invalidRequest = new CreateTemplateRequest(
-            "welcome",
-            "",
-            "EMAIL",
-            "Content",
-            "Subject",
-            null,
-            "TEXT"
-        );
+                "welcome",
+                "",
+                Channel.EMAIL,
+                "Content",
+                "Subject",
+                null,
+                "TEXT");
 
         // When & Then
-        assertThrows(TemplateValidationException.class, () ->
-            templateManagementAdapter.createTemplate(invalidRequest)
-        );
+        assertThrows(TemplateValidationException.class, () -> templateManagementAdapter.createTemplate(invalidRequest));
     }
 
-    @Test
-    @DisplayName("Should throw validation exception when channel is empty")
-    void shouldThrowValidationExceptionWhenChannelIsEmpty() {
-        // Given
-        var invalidRequest = new CreateTemplateRequest(
-            "welcome",
-            "en",
-            "",
-            "Content",
-            "Subject",
-            null,
-            "TEXT"
-        );
 
-        // When & Then
-        assertThrows(TemplateValidationException.class, () ->
-            templateManagementAdapter.createTemplate(invalidRequest)
-        );
-    }
 
     @Test
     @DisplayName("Should throw validation exception when content is empty")
     void shouldThrowValidationExceptionWhenContentIsEmpty() {
         // Given
         var invalidRequest = new CreateTemplateRequest(
-            "welcome",
-            "en",
-            "EMAIL",
-            "",
-            "Subject",
-            null,
-            "TEXT"
-        );
+                "welcome",
+                "en",
+                Channel.EMAIL,
+                "",
+                "Subject",
+                null,
+                "TEXT");
 
         // When & Then
-        assertThrows(TemplateValidationException.class, () ->
-            templateManagementAdapter.createTemplate(invalidRequest)
-        );
+        assertThrows(TemplateValidationException.class, () -> templateManagementAdapter.createTemplate(invalidRequest));
     }
 
     @Test
     @DisplayName("Should fetch template successfully")
     void shouldFetchTemplateSuccessfully() {
         // Given
-        var templateId = new NotificationTemplateId("welcome", "en", "email");
+        var templateId = new NotificationTemplateId("welcome", "en", Channel.EMAIL);
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(templateEntity));
 
         // When
-        var result = templateManagementAdapter.getTemplate("welcome", "en", "email");
+        var result = templateManagementAdapter.getTemplate("welcome", "en", Channel.EMAIL);
 
         // Then
         assertNotNull(result);
         assertEquals("welcome", result.slug());
         assertEquals("en", result.language());
-        assertEquals("email", result.channel());
+        assertEquals(Channel.EMAIL, result.channel());
         verify(templateRepository).findById(templateId);
     }
 
@@ -214,34 +174,31 @@ class TemplateManagementAdapterTest {
     @DisplayName("Should throw TemplateNotFoundException when template not found")
     void shouldThrowTemplateNotFoundExceptionWhenTemplateNotFound() {
         // Given
-        var templateId = new NotificationTemplateId("missing", "en", "email");
+        var templateId = new NotificationTemplateId("missing", "en", Channel.EMAIL);
         when(templateRepository.findById(templateId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThrows(TemplateNotFoundException.class, () ->
-            templateManagementAdapter.getTemplate("missing", "en", "email")
-        );
+        assertThrows(TemplateNotFoundException.class,
+                () -> templateManagementAdapter.getTemplate("missing", "en", Channel.EMAIL));
     }
 
     @Test
     @DisplayName("Should throw validation exception when slug is empty in get")
     void shouldThrowValidationExceptionWhenSlugIsEmptyInGet() {
         // When & Then
-        assertThrows(TemplateValidationException.class, () ->
-            templateManagementAdapter.getTemplate("", "en", "email")
-        );
+        assertThrows(TemplateValidationException.class, () -> templateManagementAdapter.getTemplate("", "en", Channel.EMAIL));
     }
 
     @Test
     @DisplayName("Should update template successfully")
     void shouldUpdateTemplateSuccessfully() {
         // Given
-        var templateId = new NotificationTemplateId("welcome", "en", "email");
+        var templateId = new NotificationTemplateId("welcome", "en", Channel.EMAIL);
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(templateEntity));
         when(templateRepository.save(any())).thenReturn(templateEntity);
 
         // When
-        var result = templateManagementAdapter.updateTemplate("welcome", "en", "email", updateRequest);
+        var result = templateManagementAdapter.updateTemplate("welcome", "en", Channel.EMAIL, updateRequest);
 
         // Then
         assertNotNull(result);
@@ -255,13 +212,12 @@ class TemplateManagementAdapterTest {
     @DisplayName("Should throw TemplateNotFoundException when updating non-existent template")
     void shouldThrowTemplateNotFoundWhenUpdatingNonExistentTemplate() {
         // Given
-        var templateId = new NotificationTemplateId("missing", "en", "email");
+        var templateId = new NotificationTemplateId("missing", "en", Channel.EMAIL);
         when(templateRepository.findById(templateId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThrows(TemplateNotFoundException.class, () ->
-            templateManagementAdapter.updateTemplate("missing", "en", "email", updateRequest)
-        );
+        assertThrows(TemplateNotFoundException.class,
+                () -> templateManagementAdapter.updateTemplate("missing", "en", Channel.EMAIL, updateRequest));
     }
 
     @Test
@@ -271,20 +227,19 @@ class TemplateManagementAdapterTest {
         var invalidRequest = new UpdateTemplateRequest("", "Subject", null, "TEXT");
 
         // When & Then
-        assertThrows(TemplateValidationException.class, () ->
-            templateManagementAdapter.updateTemplate("welcome", "en", "email", invalidRequest)
-        );
+        assertThrows(TemplateValidationException.class,
+                () -> templateManagementAdapter.updateTemplate("welcome", "en", Channel.EMAIL, invalidRequest));
     }
 
     @Test
     @DisplayName("Should delete template successfully")
     void shouldDeleteTemplateSuccessfully() {
         // Given
-        var templateId = new NotificationTemplateId("welcome", "en", "email");
+        var templateId = new NotificationTemplateId("welcome", "en", Channel.EMAIL);
         when(templateRepository.findById(templateId)).thenReturn(Optional.of(templateEntity));
 
         // When
-        templateManagementAdapter.deleteTemplate("welcome", "en", "email");
+        templateManagementAdapter.deleteTemplate("welcome", "en", Channel.EMAIL);
 
         // Then
         verify(templateRepository).findById(templateId);
@@ -295,12 +250,11 @@ class TemplateManagementAdapterTest {
     @DisplayName("Should throw TemplateNotFoundException when deleting non-existent template")
     void shouldThrowTemplateNotFoundWhenDeletingNonExistentTemplate() {
         // Given
-        var templateId = new NotificationTemplateId("missing", "en", "email");
+        var templateId = new NotificationTemplateId("missing", "en", Channel.EMAIL);
         when(templateRepository.findById(templateId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThrows(TemplateNotFoundException.class, () ->
-            templateManagementAdapter.deleteTemplate("missing", "en", "email")
-        );
+        assertThrows(TemplateNotFoundException.class,
+                () -> templateManagementAdapter.deleteTemplate("missing", "en", Channel.EMAIL));
     }
 }

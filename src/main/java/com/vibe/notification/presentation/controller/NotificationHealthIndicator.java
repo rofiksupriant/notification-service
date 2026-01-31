@@ -32,8 +32,8 @@ public class NotificationHealthIndicator implements HealthIndicator {
             builder.withDetail("database", "PostgreSQL connection OK");
         } else {
             return Health.down()
-                .withDetail("database", "PostgreSQL connection FAILED")
-                .build();
+                    .withDetail("database", "PostgreSQL connection FAILED")
+                    .build();
         }
 
         // Check Mail Server
@@ -78,11 +78,9 @@ public class NotificationHealthIndicator implements HealthIndicator {
 
     private static class HealthCheckResult {
         private final String status;
-        private final String message;
 
         HealthCheckResult(String status, String message) {
             this.status = status;
-            this.message = message;
         }
 
         String getStatus() {

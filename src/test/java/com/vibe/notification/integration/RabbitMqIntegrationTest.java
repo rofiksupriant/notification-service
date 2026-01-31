@@ -1,6 +1,7 @@
 package com.vibe.notification.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.NotificationRequestMessage;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.ProcessedMessageRepository;
 import com.vibe.notification.infrastructure.adapter.messaging.rabbitmq.RabbitMqConfiguration;
@@ -53,7 +54,7 @@ class RabbitMqIntegrationTest {
         templateRepository.deleteAll();
         
         // Create test templates for successful processing tests - EMAIL
-        NotificationTemplateId emailTemplateId = new NotificationTemplateId("welcome-template", "en", "EMAIL");
+        NotificationTemplateId emailTemplateId = new NotificationTemplateId("welcome-template", "en", Channel.EMAIL);
         NotificationTemplateEntity emailTemplate = new NotificationTemplateEntity();
         emailTemplate.setId(emailTemplateId);
         emailTemplate.setTemplateType("TEXT");
@@ -62,7 +63,7 @@ class RabbitMqIntegrationTest {
         templateRepository.save(emailTemplate);
         
         // Create test templates for successful processing tests - WHATSAPP
-        NotificationTemplateId waTemplateId = new NotificationTemplateId("welcome-template", "en", "WHATSAPP");
+        NotificationTemplateId waTemplateId = new NotificationTemplateId("welcome-template", "en", Channel.WHATSAPP);
         NotificationTemplateEntity waTemplate = new NotificationTemplateEntity();
         waTemplate.setId(waTemplateId);
         waTemplate.setTemplateType("TEXT");
@@ -87,7 +88,7 @@ class RabbitMqIntegrationTest {
                 "6281991388080",
                 "welcome-template",
                 "en",
-                "WHATSAPP",
+                Channel.WHATSAPP,
                 variables
         );
 
@@ -135,7 +136,7 @@ class RabbitMqIntegrationTest {
                 "jane@example.com",
                 "welcome-template",
                 "en",
-                "EMAIL",
+                Channel.EMAIL,
                 variables
         );
 
@@ -242,7 +243,7 @@ class RabbitMqIntegrationTest {
                     "6281991388080",
                     "welcome-template",
                     "en",
-                    "WHATSAPP",
+                    Channel.WHATSAPP,
                     variables
             );
 

@@ -1,6 +1,7 @@
 package com.vibe.notification.integration;
 
 import com.vibe.notification.application.dto.SendNotificationRequest;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
 import com.vibe.notification.infrastructure.persistence.repository.NotificationLogRepository;
@@ -59,7 +60,7 @@ class NotificationIntegrationTest {
     @DisplayName("Should process notification request and create pending log")
     void shouldProcessNotificationAndCreateLog() throws Exception {
         // Given - Create test templates for EMAIL
-        var emailTemplateId = new NotificationTemplateId("welcome", "en", "EMAIL");
+        var emailTemplateId = new NotificationTemplateId("welcome", "en", Channel.EMAIL);
         var emailTemplate = new NotificationTemplateEntity(
             emailTemplateId,
             "TEXT",
@@ -70,7 +71,7 @@ class NotificationIntegrationTest {
         templateRepository.save(emailTemplate);
         
         // And - Create test templates for WHATSAPP
-        var waTemplateId = new NotificationTemplateId("welcome", "en", "whatsapp");
+        var waTemplateId = new NotificationTemplateId("welcome", "en", Channel.WHATSAPP);
         var waTemplate = new NotificationTemplateEntity(
             waTemplateId,
             "TEXT",
@@ -89,7 +90,7 @@ class NotificationIntegrationTest {
             "john@example.com",
             "welcome",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             variables
         );
 
@@ -136,7 +137,7 @@ class NotificationIntegrationTest {
     @DisplayName("Should resolve template with language fallback")
     void shouldResolveTemplateWithFallback() throws Exception {
         // Given - Create only English template (no French) for EMAIL
-        var emailTemplateId = new NotificationTemplateId("order_confirmation", "en", "EMAIL");
+        var emailTemplateId = new NotificationTemplateId("order_confirmation", "en", Channel.EMAIL);
         var emailTemplate = new NotificationTemplateEntity(
             emailTemplateId,
             "TEXT",
@@ -147,7 +148,7 @@ class NotificationIntegrationTest {
         templateRepository.save(emailTemplate);
         
         // And - Create English template for WHATSAPP
-        var waTemplateId = new NotificationTemplateId("order_confirmation", "en", "whatsapp");
+        var waTemplateId = new NotificationTemplateId("order_confirmation", "en", Channel.WHATSAPP);
         var waTemplate = new NotificationTemplateEntity(
             waTemplateId,
             "TEXT",
@@ -165,7 +166,7 @@ class NotificationIntegrationTest {
             "customer@example.com",
             "order_confirmation",
             "fr",  // French - will fallback to English
-            "EMAIL",
+            Channel.EMAIL,
             variables
         );
 
@@ -200,7 +201,7 @@ class NotificationIntegrationTest {
             "user@example.com",
             "non_existent_template",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             new HashMap<>()
         );
 
@@ -225,7 +226,7 @@ class NotificationIntegrationTest {
     @DisplayName("Should render template with multiple variables")
     void shouldRenderTemplateWithMultipleVariables() throws Exception {
         // Given - Create template for EMAIL
-        var emailTemplateId = new NotificationTemplateId("invoice", "en", "EMAIL");
+        var emailTemplateId = new NotificationTemplateId("invoice", "en", Channel.EMAIL);
         var emailTemplate = new NotificationTemplateEntity(
             emailTemplateId,
             "TEXT",
@@ -236,7 +237,7 @@ class NotificationIntegrationTest {
         templateRepository.save(emailTemplate);
         
         // And - Create template for WHATSAPP
-        var waTemplateId = new NotificationTemplateId("invoice", "en", "whatsapp");
+        var waTemplateId = new NotificationTemplateId("invoice", "en", Channel.WHATSAPP);
         var waTemplate = new NotificationTemplateEntity(
             waTemplateId,
             "TEXT",
@@ -255,7 +256,7 @@ class NotificationIntegrationTest {
             "billing@acme.com",
             "invoice",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             variables
         );
 
@@ -280,7 +281,7 @@ class NotificationIntegrationTest {
     @DisplayName("Should handle WhatsApp message template")
     void shouldHandleWhatsAppTemplate() throws Exception {
         // Given - Create template for EMAIL
-        var emailTemplateId = new NotificationTemplateId("otp", "en", "email");
+        var emailTemplateId = new NotificationTemplateId("otp", "en", Channel.EMAIL);
         var emailTemplate = new NotificationTemplateEntity(
             emailTemplateId,
             "TEXT",
@@ -291,7 +292,7 @@ class NotificationIntegrationTest {
         templateRepository.save(emailTemplate);
         
         // And - Create template for WHATSAPP
-        var waTemplateId = new NotificationTemplateId("otp", "en", "whatsapp");
+        var waTemplateId = new NotificationTemplateId("otp", "en", Channel.WHATSAPP);
         var waTemplate = new NotificationTemplateEntity(
             waTemplateId,
             "TEXT",
@@ -308,7 +309,7 @@ class NotificationIntegrationTest {
             "6281991388080",
             "otp",
             "en",
-            "WHATSAPP",
+            Channel.WHATSAPP,
             variables
         );
 

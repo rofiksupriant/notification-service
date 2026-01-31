@@ -159,7 +159,7 @@ public class NotificationRequestListener {
         if (message.language() == null || message.language().isBlank()) {
             throw new IllegalArgumentException("language is required");
         }
-        if (message.channel() == null || message.channel().isBlank()) {
+        if (message.channel() == null) {
             throw new IllegalArgumentException("channel is required");
         }
         if (message.variables() == null) {

@@ -1,5 +1,6 @@
 package com.vibe.notification.application.dto;
 
+import com.vibe.notification.domain.model.Channel;
 import java.util.Map;
 import java.util.Optional;
 
@@ -9,7 +10,7 @@ import java.util.Optional;
  * @param recipient the notification recipient (phone number for WhatsApp, email for Email)
  * @param slug the template identifier
  * @param language the ISO 639-1 language code
- * @param channel the notification channel ("whatsapp" or "email")
+ * @param channel the notification channel (EMAIL or WHATSAPP)
  * @param variables template variables for interpolation
  * @param traceId optional idempotency key - if provided, ensures request is processed only once
  */
@@ -17,7 +18,7 @@ public record SendNotificationRequest(
     String recipient,
     String slug,
     String language,
-    String channel,
+    Channel channel,
     Map<String, Object> variables,
     Optional<String> traceId
 ) {
@@ -28,7 +29,7 @@ public record SendNotificationRequest(
         String recipient,
         String slug,
         String language,
-        String channel,
+        Channel channel,
         Map<String, Object> variables
     ) {
         this(recipient, slug, language, channel, variables, Optional.empty());

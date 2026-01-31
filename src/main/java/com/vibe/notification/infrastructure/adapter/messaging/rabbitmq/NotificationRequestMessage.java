@@ -1,5 +1,6 @@
 package com.vibe.notification.infrastructure.adapter.messaging.rabbitmq;
 
+import com.vibe.notification.domain.model.Channel;
 import java.util.Map;
 
 /**
@@ -11,7 +12,7 @@ import java.util.Map;
  * @param recipient the message recipient (phone number for WhatsApp, email address for Email)
  * @param slug the unique identifier of the template to use for rendering
  * @param language the ISO 639-1 language code (e.g., "en", "id", "es")
- * @param channel the notification channel (e.g., "whatsapp", "email")
+ * @param channel the notification channel (EMAIL or WHATSAPP)
  * @param variables a map of template variables to be interpolated into the template content
  */
 public record NotificationRequestMessage(
@@ -19,7 +20,7 @@ public record NotificationRequestMessage(
     String recipient,
     String slug,
     String language,
-    String channel,
+    Channel channel,
     Map<String, Object> variables
 ) {
 }

@@ -2,6 +2,7 @@ package com.vibe.notification.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.notification.application.dto.CreateTemplateRequest;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.application.dto.TemplateResponse;
 import com.vibe.notification.application.dto.UpdateTemplateRequest;
 import com.vibe.notification.domain.exception.TemplateAlreadyExistsException;
@@ -52,7 +53,7 @@ class TemplateControllerTest {
         templateResponse = new TemplateResponse(
             "welcome",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             "TEXT",
             "Welcome",
             "Hello [[${name}]]",
@@ -64,7 +65,7 @@ class TemplateControllerTest {
         createRequest = new CreateTemplateRequest(
             "welcome",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             "Hello [[${name}]]",
             "Welcome",
             null,
@@ -120,28 +121,28 @@ class TemplateControllerTest {
     @DisplayName("GET /api/v1/templates/{slug}/{lang} - Should fetch template successfully")
     void shouldFetchTemplateSuccessfully() throws Exception {
         // Given
-        when(templateManagementAdapter.getTemplate("welcome", "en", "email")).thenReturn(templateResponse);
+        when(templateManagementAdapter.getTemplate("welcome", "en", Channel.EMAIL)).thenReturn(templateResponse);
 
         // When & Then
-        mockMvc.perform(get("/api/v1/templates/welcome/en/email")
+        mockMvc.perform(get("/api/v1/templates/welcome/en/EMAIL")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.slug").value("welcome"))
             .andExpect(jsonPath("$.language").value("en"))
             .andExpect(jsonPath("$.channel").value("EMAIL"));
 
-        verify(templateManagementAdapter).getTemplate("welcome", "en", "email");
+        verify(templateManagementAdapter).getTemplate("welcome", "en", Channel.EMAIL);
     }
 
     @Test
     @DisplayName("GET /api/v1/templates/{slug}/{lang} - Should return 404 when template not found")
     void shouldReturn404WhenTemplateNotFound() throws Exception {
         // Given
-        when(templateManagementAdapter.getTemplate("missing", "en", "email"))
+        when(templateManagementAdapter.getTemplate("missing", "en", Channel.EMAIL))
             .thenThrow(new TemplateNotFoundException("missing", "en"));
 
         // When & Then
-        mockMvc.perform(get("/api/v1/templates/missing/en/email")
+        mockMvc.perform(get("/api/v1/templates/missing/en/EMAIL")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
     }
@@ -151,11 +152,11 @@ class TemplateControllerTest {
     void shouldUpdateTemplateWithValidApiKey() throws Exception {
         // Given
         when(apiKeyValidator.validateApiKey(VALID_API_KEY)).thenReturn(true);
-        when(templateManagementAdapter.updateTemplate("welcome", "en", "email", updateRequest))
+        when(templateManagementAdapter.updateTemplate("welcome", "en", Channel.EMAIL, updateRequest))
             .thenReturn(templateResponse);
 
         // When & Then
-        mockMvc.perform(put("/api/v1/templates/welcome/en/email")
+        mockMvc.perform(put("/api/v1/templates/welcome/en/EMAIL")
                 .header(API_KEY_HEADER, VALID_API_KEY)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
@@ -164,7 +165,7 @@ class TemplateControllerTest {
             .andExpect(jsonPath("$.language").value("en"));
 
         verify(apiKeyValidator).validateApiKey(VALID_API_KEY);
-        verify(templateManagementAdapter).updateTemplate("welcome", "en", "email", updateRequest);
+        verify(templateManagementAdapter).updateTemplate("welcome", "en", Channel.EMAIL, updateRequest);
     }
 
     @Test
@@ -180,7 +181,7 @@ class TemplateControllerTest {
                 .content(objectMapper.writeValueAsString(updateRequest)))
             .andExpect(status().isUnauthorized());
 
-        verify(templateManagementAdapter, never()).updateTemplate(anyString(), anyString(), anyString(), any());
+        verify(templateManagementAdapter, never()).updateTemplate(anyString(), anyString(), any(Channel.class), any());
     }
 
     @Test
@@ -188,15 +189,15 @@ class TemplateControllerTest {
     void shouldDeleteTemplateWithValidApiKey() throws Exception {
         // Given
         when(apiKeyValidator.validateApiKey(VALID_API_KEY)).thenReturn(true);
-        doNothing().when(templateManagementAdapter).deleteTemplate("welcome", "en", "email");
+        doNothing().when(templateManagementAdapter).deleteTemplate("welcome", "en", Channel.EMAIL);
 
         // When & Then
-        mockMvc.perform(delete("/api/v1/templates/welcome/en/email")
+        mockMvc.perform(delete("/api/v1/templates/welcome/en/EMAIL")
                 .header(API_KEY_HEADER, VALID_API_KEY))
             .andExpect(status().isNoContent());
 
         verify(apiKeyValidator).validateApiKey(VALID_API_KEY);
-        verify(templateManagementAdapter).deleteTemplate("welcome", "en", "email");
+        verify(templateManagementAdapter).deleteTemplate("welcome", "en", Channel.EMAIL);
     }
 
     @Test
@@ -210,7 +211,7 @@ class TemplateControllerTest {
                 .header(API_KEY_HEADER, "invalid-key"))
             .andExpect(status().isUnauthorized());
 
-        verify(templateManagementAdapter, never()).deleteTemplate(anyString(), anyString(), anyString());
+        verify(templateManagementAdapter, never()).deleteTemplate(anyString(), anyString(), any(Channel.class));
     }
 
     @Test

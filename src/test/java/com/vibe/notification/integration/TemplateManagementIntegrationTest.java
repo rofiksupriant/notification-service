@@ -2,6 +2,7 @@ package com.vibe.notification.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.notification.application.dto.CreateTemplateRequest;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.application.dto.UpdateTemplateRequest;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
 import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
@@ -47,7 +48,7 @@ class TemplateManagementIntegrationTest {
         var createRequest = new CreateTemplateRequest(
             slug,
             language,
-            "EMAIL",
+            Channel.EMAIL,
             "Hello [[${name}]], welcome!",
             "Welcome to Our Service",
             null,
@@ -64,7 +65,7 @@ class TemplateManagementIntegrationTest {
             .andExpect(jsonPath("$.channel").value("EMAIL"));
 
         // 2. Verify template exists in database
-        var templateId = new NotificationTemplateId(slug, language, "EMAIL");
+        var templateId = new NotificationTemplateId(slug, language, Channel.EMAIL);
         assertTrue(templateRepository.findById(templateId).isPresent());
 
         // 3. Fetch template
@@ -118,7 +119,7 @@ class TemplateManagementIntegrationTest {
         var createRequest = new CreateTemplateRequest(
             slug,
             language,
-            "EMAIL",
+            Channel.EMAIL,
             "Content",
             "Subject",
             null,
@@ -146,7 +147,7 @@ class TemplateManagementIntegrationTest {
         var createRequest = new CreateTemplateRequest(
             "test-create-validation",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             "Content",
             "Subject",
             null,
@@ -170,7 +171,7 @@ class TemplateManagementIntegrationTest {
         var createRequest = new CreateTemplateRequest(
             slug,
             language,
-            "EMAIL",
+            Channel.EMAIL,
             "Content",
             "Subject",
             null,
@@ -202,7 +203,7 @@ class TemplateManagementIntegrationTest {
         var createRequest = new CreateTemplateRequest(
             slug,
             language,
-            "EMAIL",
+            Channel.EMAIL,
             "Content",
             "Subject",
             null,
@@ -221,7 +222,7 @@ class TemplateManagementIntegrationTest {
             .andExpect(status().isUnauthorized());
 
         // Verify template still exists
-        var templateId = new NotificationTemplateId(slug, language, "EMAIL");
+        var templateId = new NotificationTemplateId(slug, language, Channel.EMAIL);
         assertTrue(templateRepository.findById(templateId).isPresent());
     }
 
@@ -232,7 +233,7 @@ class TemplateManagementIntegrationTest {
         var invalidRequest = new CreateTemplateRequest(
             "",
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             "Content",
             "Subject",
             null,
@@ -255,7 +256,7 @@ class TemplateManagementIntegrationTest {
         var enRequest = new CreateTemplateRequest(
             slug,
             "en",
-            "EMAIL",
+            Channel.EMAIL,
             "Hello",
             "English Subject",
             null,
@@ -272,7 +273,7 @@ class TemplateManagementIntegrationTest {
         var idRequest = new CreateTemplateRequest(
             slug,
             "id",
-            "EMAIL",
+            Channel.EMAIL,
             "Halo",
             "Subject Indonesia",
             null,

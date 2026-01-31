@@ -5,7 +5,6 @@ import com.vibe.notification.application.dto.NotificationResponse;
 import com.vibe.notification.application.port.EmailNotificationPort;
 import com.vibe.notification.application.port.WhatsAppNotificationPort;
 import com.vibe.notification.application.port.IdempotencyPort;
-import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.domain.model.NotificationRequest;
 import com.vibe.notification.domain.service.TraceService;
 import com.vibe.notification.domain.service.NotificationDomainService;
@@ -86,13 +85,12 @@ public class NotificationApplicationService {
 
         // Generate internal trace ID for logging
         var internalTraceId = traceService.generateTraceId();
-        var channel = Channel.from(request.channel());
         
         var notificationRequest = new NotificationRequest(
             request.recipient(),
             request.slug(),
             request.language(),
-            channel,
+            request.channel(),
             request.variables()
         );
 
@@ -138,7 +136,7 @@ public class NotificationApplicationService {
             logger.info("Starting async notification processing: logId={}", logId);
 
             // Resolve template with language fallback
-            var template = templateResolutionService.resolveTemplate(request.slug(), request.language(), request.channel().name());
+            var template = templateResolutionService.resolveTemplate(request.slug(), request.language(), request.channel());
 
             // Render template content
             var renderedContent = templateRenderingService.renderContent(template.getContent(), request.variables());

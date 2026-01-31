@@ -5,6 +5,7 @@ import com.vibe.notification.application.port.TemplateManagementPort;
 import com.vibe.notification.domain.exception.TemplateAlreadyExistsException;
 import com.vibe.notification.domain.exception.TemplateNotFoundException;
 import com.vibe.notification.domain.exception.TemplateValidationException;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateEntity;
 import com.vibe.notification.infrastructure.persistence.entity.NotificationTemplateId;
 import com.vibe.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
@@ -74,7 +75,7 @@ public class TemplateManagementAdapter implements TemplateManagementPort {
      * @return the template response
      * @throws TemplateNotFoundException if template is not found
      */    @Override    @Transactional(readOnly = true)
-    public TemplateResponse getTemplate(String slug, String language, String channel) {
+    public TemplateResponse getTemplate(String slug, String language, Channel channel) {
         logger.debug("Fetching template: slug={}, language={}, channel={}", slug, language, channel);
 
         validateSlugAndLanguage(slug, language);
@@ -99,7 +100,7 @@ public class TemplateManagementAdapter implements TemplateManagementPort {
      * @throws TemplateValidationException if validation fails
      */
     @Override
-    public TemplateResponse updateTemplate(String slug, String language, String channel, UpdateTemplateRequest request) {
+    public TemplateResponse updateTemplate(String slug, String language, Channel channel, UpdateTemplateRequest request) {
         logger.info("Updating template: slug={}, language={}, channel={}", slug, language, channel);
 
         validateSlugAndLanguage(slug, language);
@@ -139,7 +140,7 @@ public class TemplateManagementAdapter implements TemplateManagementPort {
      * @throws TemplateNotFoundException if template is not found
      */
     @Override
-    public void deleteTemplate(String slug, String language, String channel) {
+    public void deleteTemplate(String slug, String language, Channel channel) {
         logger.info("Deleting template: slug={}, language={}, channel={}", slug, language, channel);
 
         validateSlugAndLanguage(slug, language);
@@ -165,7 +166,7 @@ public class TemplateManagementAdapter implements TemplateManagementPort {
         if (request.language() == null || request.language().isBlank()) {
             throw new TemplateValidationException("Language cannot be empty");
         }
-        if (request.channel() == null || request.channel().isBlank()) {
+        if (request.channel() == null) {
             throw new TemplateValidationException("Channel cannot be empty");
         }
         if (request.content() == null || request.content().isBlank()) {
