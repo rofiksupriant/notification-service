@@ -1,6 +1,6 @@
-# Docker Compose - Default (Development)
-# Same as docker-compose.with-db.yml
-# Full setup with PostgreSQL container for easy local development
+# Docker Compose - With Database
+# Full setup with PostgreSQL container included
+# Use this for complete local development environment
 
 version: '3.8'
 
@@ -34,6 +34,7 @@ services:
       POSTGRES_DB: notif_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:

@@ -1,0 +1,38 @@
+# Docker Compose - App Only (No Build)
+# Use pre-built image from Docker Hub, no database
+# Use this to quickly test a published image with local database
+
+version: '3.8'
+
+services:
+  notification-service:
+    image: ${DOCKER_USERNAME:-rofiksupriant}/notification-service:${APP_VERSION:-latest}
+    container_name: notification-service
+    ports:
+      - "8080:8080"
+    environment:
+      NOTIF_DB_URL: jdbc:postgresql://host.docker.internal:5432/notif_db
+      NOTIF_DB_USERNAME: ${NOTIF_DB_USERNAME:-postgres}
+      NOTIF_DB_PASSWORD: ${NOTIF_DB_PASSWORD:-postgres}
+      NOTIF_API_SECRET: ${NOTIF_API_SECRET:-dev-secret-key}
+      NOTIF_MAIL_USERNAME: ${NOTIF_MAIL_USERNAME}
+      NOTIF_MAIL_PASSWORD: ${NOTIF_MAIL_PASSWORD}
+      NOTIF_WATZAP_API_KEY: ${NOTIF_WATZAP_API_KEY}
+      NOTIF_WATZAP_PHONE_ID: ${NOTIF_WATZAP_PHONE_ID}
+      NOTIF_RABBITMQ_ENABLED: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+# No build, no database
+# Just pulls image and runs with local PostgreSQL
+#
+# Prerequisites:
+# 1. Image pushed to Docker Hub
+# 2. PostgreSQL running locally with notif_db database
+#
+# Usage:
+#   docker compose -f docker-compose.app-only.yml up -d
+#
+# Or with specific image:
+#   DOCKER_USERNAME=yourname APP_VERSION=1.0.0 docker compose -f docker-compose.app-only.yml up -d

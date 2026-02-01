@@ -40,7 +40,7 @@ import com.vibe.notification.domain.service.TemplateResolutionService;
  */
 @Component
 @ConditionalOnProperty(name = "app.feature.rabbitmq.enabled", havingValue = "true")
-@DependsOn({"rabbitQueueInitializer", "mainQueue", "deadLetterQueue", "deadLetterExchange"})
+@DependsOn({"mainQueue", "deadLetterQueue", "deadLetterExchange"})
 public class NotificationRequestListener {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationRequestListener.class);

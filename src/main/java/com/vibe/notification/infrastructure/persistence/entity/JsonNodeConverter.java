@@ -8,10 +8,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * JPA converter to handle JsonNode serialization/deserialization
- * Works with both PostgreSQL JSONB and H2 TEXT columns
+ * Database-agnostic JPA converter for JsonNode to String.
+ * Stores JSON as TEXT/VARCHAR in any database (PostgreSQL, H2, MySQL, etc).
+ * Use @Convert(converter = JsonNodeConverter.class) on fields.
  */
-@Converter(autoApply = true)
+@Converter(autoApply = false)
 public class JsonNodeConverter implements AttributeConverter<JsonNode, String> {
     
     private static final Logger logger = LoggerFactory.getLogger(JsonNodeConverter.class);

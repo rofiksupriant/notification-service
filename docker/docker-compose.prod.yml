@@ -1,0 +1,48 @@
+services:
+  notification-service:
+    image: docker.io/rofiksupriant/notification-service:${APP_VERSION:-latest}
+    container_name: notification-service
+    restart: unless-stopped
+    ports:
+      - "5006:8080"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: notification-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${NOTIF_DB_NAME:-notif_db}
+      POSTGRES_USER: ${NOTIF_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${NOTIF_DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notif_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

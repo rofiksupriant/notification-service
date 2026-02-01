@@ -50,7 +50,52 @@ mvn spring-boot:run
 
 The app will start at **http://localhost:8080**
 
-## 📋 Configuration
+## � Docker Deployment
+
+### Local Development with Docker
+```bash
+# Build and run with Docker Compose
+cd docker
+docker-compose up --build
+
+# Access the app
+curl http://localhost:8080/actuator/health
+```
+
+### Production Deployment to Docker Hub
+
+1. **Build and push to Docker Hub:**
+```bash
+# Windows
+./build-and-push.bat your_docker_username 1.0.0
+
+# Linux/macOS
+./build-and-push.sh your_docker_username 1.0.0
+```
+
+2. **Deploy on server:**
+```bash
+# Copy docker-compose.prod.yml and .env.prod.example to server
+scp docker/docker-compose.prod.yml user@server:/opt/notification-service/
+scp .env.prod.example user@server:/opt/notification-service/.env.prod
+
+# On server, edit .env.prod with your secrets
+cd /opt/notification-service
+nano .env.prod
+
+# Start services
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+**Key Features:**
+- ✅ PostgreSQL only accessible from app container (no exposed port)
+- ✅ Health checks with automatic restart
+- ✅ Non-root user in container
+- ✅ Multi-stage build for minimal image size
+
+**See [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) for complete guide.**
+
+## �📋 Configuration
 
 All settings use environment variables with `NOTIF_` prefix.
 
@@ -223,11 +268,19 @@ created_at        TIMESTAMP
 | Build | Maven 3.9+ |
 | Docs | SpringDoc OpenAPI (Swagger) |
 
-## 📖 Documentation
+## � Documentation
 
-- **[ENV_VARIABLES.md](ENV_VARIABLES.md)** - Complete environment variable reference
-- **[SECURITY.md](SECURITY.md)** - Security best practices and credential management
-- **[docker/docker-compose.yml](docker/docker-compose.yml)** - Local development setup
+- **[docs/README.md](docs/README.md)** - Documentation index & navigation
+- **[docs/deployment/QUICK_DEPLOY.md](docs/deployment/QUICK_DEPLOY.md)** - 5-minute deploy guide
+- **[docs/deployment/SETUP.md](docs/deployment/SETUP.md)** - Local development setup
+- **[docs/deployment/WORKFLOW.md](docs/deployment/WORKFLOW.md)** - Full deployment workflow
+- **[docs/deployment/CHECKLIST.md](docs/deployment/CHECKLIST.md)** - Verification checklist
+- **[docs/docker/OVERVIEW.md](docs/docker/OVERVIEW.md)** - Docker concepts & setup
+- **[docs/reference/COMMANDS.md](docs/reference/COMMANDS.md)** - Docker commands reference
+- **[docs/reference/ENVIRONMENT.md](docs/reference/ENVIRONMENT.md)** - Environment variables
+- **[docs/reference/TROUBLESHOOTING.md](docs/reference/TROUBLESHOOTING.md)** - Common issues & fixes
+- **[ENV_VARIABLES.md](ENV_VARIABLES.md)** - Detailed configuration reference
+- **[SECURITY.md](SECURITY.md)** - Security guidelines
 
 ## 🐛 Troubleshooting
 

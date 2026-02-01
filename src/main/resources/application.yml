@@ -25,7 +25,9 @@ spring:
     enabled: ${NOTIF_FLYWAY_ENABLED:true}
     locations: ${NOTIF_FLYWAY_LOCATIONS:classpath:db/migration}
     baseline-on-migrate: ${NOTIF_FLYWAY_BASELINE_ON_MIGRATE:true}
-  
+    user: ${NOTIF_DB_USERNAME:postgres}
+    password: ${NOTIF_DB_PASSWORD:postgres}
+
   mail:
     host: ${NOTIF_MAIL_HOST:smtp.gmail.com}
     port: ${NOTIF_MAIL_PORT:587}

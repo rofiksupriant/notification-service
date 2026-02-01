@@ -31,8 +31,8 @@ public class NotificationLogEntity {
     @Column(name = "channel", nullable = false)
     private String channel;
 
-    @Column(name = "variables")
-    @Convert(converter = JsonNodeConverter.class)
+    @Column(name = "variables", columnDefinition = "JSONB")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private JsonNode variables;
 
     @Column(name = "status", nullable = false)

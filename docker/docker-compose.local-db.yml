@@ -1,0 +1,39 @@
+# Docker Compose - Local Database
+# App in container, PostgreSQL running locally on host
+# Use this when you already have PostgreSQL installed locally
+
+version: '3.8'
+
+services:
+  notification-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8080:8080"
+    environment:
+      # Connect to host machine's PostgreSQL
+      # Windows/Mac: Use host.docker.internal
+      # Linux: Use 172.17.0.1 or --network host
+      NOTIF_DB_URL: jdbc:postgresql://host.docker.internal:5432/notif_db
+      NOTIF_DB_USERNAME: ${NOTIF_DB_USERNAME:-postgres}
+      NOTIF_DB_PASSWORD: ${NOTIF_DB_PASSWORD:-postgres}
+      NOTIF_API_SECRET: ${NOTIF_API_SECRET:-dev-secret-key}
+      NOTIF_RABBITMQ_ENABLED: "false"
+      NOTIF_LOGGING_LEVEL_APP: DEBUG
+      SPRING_JPA_SHOW_SQL: "true"
+    extra_hosts:
+      # For older Docker versions or Linux
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+# No database container - expects PostgreSQL on host at localhost:5432
+# 
+# Prerequisites:
+# 1. PostgreSQL installed and running locally
+# 2. Database created: createdb -U postgres notif_db
+# 3. Accessible from Docker container
+#
+# To verify local DB is accessible:
+#   psql -U postgres -d notif_db -c "SELECT 1;"

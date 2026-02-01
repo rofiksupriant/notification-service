@@ -14,9 +14,6 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,11 +29,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * - DLQ routing after exhausted retries
  * - Custom header x-last-error in DLQ messages
  * - Exponential backoff timing
- * - Differentiation between transient errors (retryable) and validation errors (non-retryable) 
+ * - Differentiation between transient errors (retryable) and validation errors (non-retryable)
+ * Uses Testcontainers for PostgreSQL and RabbitMQ.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-class RetryAndDlqIntegrationTest {
+class RetryAndDlqIntegrationTest extends AbstractRabbitMqIntegrationTest {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;

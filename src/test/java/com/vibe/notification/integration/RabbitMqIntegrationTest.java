@@ -15,8 +15,6 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -27,11 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration tests for RabbitMQ message consumption and idempotent processing.
- * Uses local RabbitMQ instance on localhost:5672
+ * Uses Testcontainers for PostgreSQL and RabbitMQ.
  */
-@SpringBootTest
-@ActiveProfiles("test")
-class RabbitMqIntegrationTest {
+class RabbitMqIntegrationTest extends AbstractRabbitMqIntegrationTest {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;

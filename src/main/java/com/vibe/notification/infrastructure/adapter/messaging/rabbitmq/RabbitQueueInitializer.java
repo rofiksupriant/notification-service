@@ -1,6 +1,8 @@
 package com.vibe.notification.infrastructure.adapter.messaging.rabbitmq;
 
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +16,8 @@ import org.slf4j.LoggerFactory;
  * 3. Avoid conflicts between listener auto-declaration and bean configuration
  */
 @Component
+@Profile("test | dev")
+@ConditionalOnProperty(name = "app.feature.rabbitmq.enabled", havingValue = "true")
 public class RabbitQueueInitializer {
     private static final Logger logger = LoggerFactory.getLogger(RabbitQueueInitializer.class);
 
