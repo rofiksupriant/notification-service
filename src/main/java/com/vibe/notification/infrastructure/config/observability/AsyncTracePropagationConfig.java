@@ -3,6 +3,7 @@ package com.vibe.notification.infrastructure.config.observability;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskDecorator;
@@ -20,6 +21,15 @@ public class AsyncTracePropagationConfig implements AsyncConfigurer {
 
     private final OpenTelemetry openTelemetry;
 
+    @Value("${otel.async.core-pool-size:5}")
+    private int corePoolSize;
+
+    @Value("${otel.async.max-pool-size:10}")
+    private int maxPoolSize;
+
+    @Value("${otel.async.queue-capacity:100}")
+    private int queueCapacity;
+
     public AsyncTracePropagationConfig(OpenTelemetry openTelemetry) {
         this.openTelemetry = openTelemetry;
     }
@@ -27,9 +37,9 @@ public class AsyncTracePropagationConfig implements AsyncConfigurer {
     @Override
     public Executor getAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(corePoolSize);
+        executor.setMaxPoolSize(maxPoolSize);
+        executor.setQueueCapacity(queueCapacity);
         executor.setThreadNamePrefix("async-otel-");
         executor.setTaskDecorator(new TraceContextTaskDecorator());
         executor.initialize();

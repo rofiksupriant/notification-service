@@ -127,6 +127,10 @@ otel:
     exporter: ${OTEL_METRICS_EXPORTER:otlp}
   logs:
     exporter: ${OTEL_LOGS_EXPORTER:otlp}
+  async:
+    core-pool-size: ${NOTIF_OTEL_ASYNC_CORE_POOL_SIZE:5}
+    max-pool-size: ${NOTIF_OTEL_ASYNC_MAX_POOL_SIZE:10}
+    queue-capacity: ${NOTIF_OTEL_ASYNC_QUEUE_CAPACITY:100}
 
 # SpringDoc OpenAPI Configuration
 springdoc:
