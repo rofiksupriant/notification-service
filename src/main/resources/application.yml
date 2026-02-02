@@ -2,6 +2,10 @@ spring:
   application:
     name: ${NOTIF_APP_NAME:notification-service}
   
+  # OpenTelemetry SDK - disabled when app.feature.otel.enabled=false
+  autoconfigure:
+    exclude: ${NOTIF_OTEL_AUTOCONFIGURE_EXCLUDE:}
+  
   jpa:
     hibernate:
       ddl-auto: ${NOTIF_JPA_DDL_AUTO:validate}
@@ -76,6 +80,8 @@ app:
   feature:
     rabbitmq:
       enabled: ${NOTIF_RABBITMQ_ENABLED:true}
+    otel:
+      enabled: ${NOTIF_OTEL_ENABLED:true}
 
 watzap:
   api-key: ${NOTIF_WATZAP_API_KEY}

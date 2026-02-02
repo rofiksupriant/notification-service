@@ -4,6 +4,7 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskDecorator;
@@ -15,8 +16,11 @@ import java.util.concurrent.Executor;
 /**
  * Configuration for OpenTelemetry trace propagation across async threads.
  * Ensures traceId and spanId are properly propagated to async executions.
+ * 
+ * This configuration is only active when app.feature.otel.enabled=true
  */
 @Configuration
+@ConditionalOnProperty(name = "app.feature.otel.enabled", havingValue = "true", matchIfMissing = true)
 public class AsyncTracePropagationConfig implements AsyncConfigurer {
 
     private final OpenTelemetry openTelemetry;
