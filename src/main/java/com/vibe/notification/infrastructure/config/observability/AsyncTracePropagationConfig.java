@@ -48,14 +48,19 @@ public class AsyncTracePropagationConfig implements AsyncConfigurer {
 
     /**
      * TaskDecorator that propagates OpenTelemetry context to async threads.
+     * 
+     * This is a static inner class because it doesn't require access to the outer class state.
+     * The OpenTelemetry context is captured per-task from the calling thread using
+     * Context.current(), not from the configuration instance. This design ensures that
+     * each async task captures its own parent context at task submission time.
      */
     private static class TraceContextTaskDecorator implements TaskDecorator {
         @Override
         public Runnable decorate(Runnable runnable) {
-            // Capture current context
+            // Capture current context from the calling thread
             Context currentContext = Context.current();
             
-            // Return wrapped runnable that restores context
+            // Return wrapped runnable that restores context in the async thread
             return () -> {
                 try (var ignored = currentContext.makeCurrent()) {
                     runnable.run();

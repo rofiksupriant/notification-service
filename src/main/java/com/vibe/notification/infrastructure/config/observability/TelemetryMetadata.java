@@ -13,6 +13,13 @@ public record TelemetryMetadata(
         Map<String, String> customAttributes
 ) {
     /**
+     * Canonical constructor with defensive copy to ensure immutability.
+     */
+    public TelemetryMetadata {
+        customAttributes = Map.copyOf(customAttributes);
+    }
+
+    /**
      * Creates TelemetryMetadata with minimal required fields.
      */
     public static TelemetryMetadata of(String serviceName, String serviceVersion, String environment) {
@@ -27,7 +34,7 @@ public record TelemetryMetadata(
             String serviceVersion, 
             String environment,
             Map<String, String> customAttributes) {
-        return new TelemetryMetadata(serviceName, serviceVersion, environment, Map.copyOf(customAttributes));
+        return new TelemetryMetadata(serviceName, serviceVersion, environment, customAttributes);
     }
 
     /**
@@ -36,6 +43,6 @@ public record TelemetryMetadata(
     public TelemetryMetadata withAdditionalAttributes(Map<String, String> additionalAttributes) {
         Map<String, String> merged = new java.util.HashMap<>(customAttributes);
         merged.putAll(additionalAttributes);
-        return new TelemetryMetadata(serviceName, serviceVersion, environment, Map.copyOf(merged));
+        return new TelemetryMetadata(serviceName, serviceVersion, environment, merged);
     }
 }
