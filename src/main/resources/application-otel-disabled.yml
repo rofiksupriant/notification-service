@@ -1,0 +1,12 @@
+# Profile for disabling OpenTelemetry
+# Activate this profile when you want to disable OTel: --spring.profiles.active=otel-disabled
+# Or via environment: SPRING_PROFILES_ACTIVE=otel-disabled
+
+spring:
+  autoconfigure:
+    exclude: io.opentelemetry.instrumentation.spring.autoconfigure.OpenTelemetryAutoConfiguration
+
+app:
+  feature:
+    otel:
+      enabled: false

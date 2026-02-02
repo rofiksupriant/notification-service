@@ -76,6 +76,9 @@ app:
   feature:
     rabbitmq:
       enabled: ${NOTIF_RABBITMQ_ENABLED:true}
+    # OpenTelemetry observability feature toggle
+    # To disable: Use profile 'otel-disabled' (e.g., SPRING_PROFILES_ACTIVE=otel-disabled)
+    # Or set: NOTIF_OTEL_ENABLED=false
     otel:
       enabled: ${NOTIF_OTEL_ENABLED:true}
 
