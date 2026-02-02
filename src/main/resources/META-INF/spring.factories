@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.vibe.notification.infrastructure.config.observability.OpenTelemetryAutoConfigurationExcluder

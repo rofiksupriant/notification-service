@@ -2,10 +2,6 @@ spring:
   application:
     name: ${NOTIF_APP_NAME:notification-service}
   
-  # OpenTelemetry SDK - disabled when app.feature.otel.enabled=false
-  autoconfigure:
-    exclude: ${NOTIF_OTEL_AUTOCONFIGURE_EXCLUDE:}
-  
   jpa:
     hibernate:
       ddl-auto: ${NOTIF_JPA_DDL_AUTO:validate}
