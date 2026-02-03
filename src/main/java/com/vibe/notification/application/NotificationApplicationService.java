@@ -6,6 +6,7 @@ import com.vibe.notification.application.port.EmailNotificationPort;
 import com.vibe.notification.application.port.WhatsAppNotificationPort;
 import com.vibe.notification.application.port.IdempotencyPort;
 import com.vibe.notification.domain.model.NotificationRequest;
+import com.vibe.notification.domain.model.NotificationResult;
 import com.vibe.notification.domain.service.TraceService;
 import com.vibe.notification.domain.service.NotificationDomainService;
 import com.vibe.notification.domain.service.TemplateResolutionService;
@@ -15,6 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Application service for notification processing orchestration
@@ -109,6 +113,96 @@ public class NotificationApplicationService {
     }
 
     /**
+     * Send notification with synchronous mode support
+     * 
+     * @param request the notification request
+     * @param sync if true, waits for processing to complete (max 15s); if false, returns immediately
+     * @return response with final status if sync=true, or pending status if sync=false
+     */
+    public NotificationResponse sendNotificationWithSync(SendNotificationRequest request, boolean sync) {
+        logger.info("Processing notification request (sync={}): recipient={}, slug={}", sync, request.recipient(), request.slug());
+
+        // Check idempotency if client provided a trace ID
+        String clientTraceIdStr = null;
+        if (request.traceId().isPresent()) {
+            clientTraceIdStr = request.traceId().get();
+            
+            // Check if this request was already processed
+            if (isMessageAlreadyProcessed(clientTraceIdStr)) {
+                logger.debug("Request with traceId {} already processed, skipping", clientTraceIdStr);
+                // Return a response indicating it was already processed
+                return new NotificationResponse(
+                    null,
+                    clientTraceIdStr,
+                    "ALREADY_PROCESSED",
+                    "This request was already processed"
+                );
+            }
+            
+            // Mark as processed before creating log (for idempotency)
+            markMessageAsProcessed(clientTraceIdStr);
+        }
+
+        // Generate internal trace ID for logging
+        var internalTraceId = traceService.generateTraceId();
+        
+        var notificationRequest = new NotificationRequest(
+            request.recipient(),
+            request.slug(),
+            request.language(),
+            request.channel(),
+            request.variables()
+        );
+
+        // Create pending log entry with internal trace ID
+        var logEntity = notificationDomainService.createPendingLog(notificationRequest, internalTraceId);
+
+        if (sync) {
+            // Synchronous mode: wait for completion
+            try {
+                CompletableFuture<NotificationResult> future = self.processNotificationWithResult(logEntity.getId(), notificationRequest);
+                
+                // Wait for completion with 15-second timeout
+                NotificationResult result = future.get(15, java.util.concurrent.TimeUnit.SECONDS);
+                
+                return new NotificationResponse(
+                    logEntity.getId(),
+                    internalTraceId.toString(),
+                    result.status().name(),
+                    result.isSuccess() ? "Notification sent successfully" : "Notification failed: " + result.errorMessage(),
+                    result.status()
+                );
+            } catch (java.util.concurrent.TimeoutException e) {
+                logger.warn("Notification processing timed out after 15 seconds: logId={}", logEntity.getId());
+                return new NotificationResponse(
+                    logEntity.getId(),
+                    internalTraceId.toString(),
+                    "TIMEOUT",
+                    "Notification processing timed out after 15 seconds"
+                );
+            } catch (Exception e) {
+                logger.error("Error waiting for notification completion: logId={}, error={}", logEntity.getId(), e.getMessage(), e);
+                return new NotificationResponse(
+                    logEntity.getId(),
+                    internalTraceId.toString(),
+                    "ERROR",
+                    "Error processing notification: " + e.getMessage()
+                );
+            }
+        } else {
+            // Asynchronous mode: return immediately
+            self.processNotificationAsync(logEntity.getId(), notificationRequest);
+            
+            return new NotificationResponse(
+                logEntity.getId(),
+                internalTraceId.toString(),
+                "ACCEPTED",
+                "Notification accepted for processing"
+            );
+        }
+    }
+
+    /**
      * Checks if a message with the given trace_id has already been processed.
      *
      * @param traceId the unique message identifier
@@ -156,6 +250,48 @@ public class NotificationApplicationService {
         } catch (Exception e) {
             logger.error("Notification processing failed: logId={}, error={}", logId, e.getMessage(), e);
             notificationDomainService.markAsFailed(logId, e.getMessage());
+        } finally {
+            traceService.clearTraceId();
+        }
+    }
+
+    /**
+     * Async notification processing that returns a CompletableFuture with the result
+     */
+    @Async
+    public CompletableFuture<NotificationResult> processNotificationWithResult(UUID logId, NotificationRequest request) {
+        try {
+            logger.info("Starting async notification processing with result: logId={}", logId);
+
+            // Resolve template with language fallback
+            var template = templateResolutionService.resolveTemplate(request.slug(), request.language(), request.channel());
+
+            // Render template content
+            var renderedContent = templateRenderingService.renderContent(template.getContent(), request.variables());
+            var renderedSubject = templateRenderingService.renderSubject(template.getSubject(), request.variables());
+
+            // Send via appropriate port
+            switch (request.channel()) {
+                case EMAIL -> emailNotificationPort.sendEmail(request.recipient(), template, renderedSubject, renderedContent);
+                case WHATSAPP -> whatsAppNotificationPort.sendWhatsAppMessage(request.recipient(), template, renderedContent);
+                default -> {
+                    String error = "Unsupported channel: " + request.channel();
+                    logger.error("Notification processing failed: logId={}, error={}", logId, error);
+                    notificationDomainService.markAsFailed(logId, error);
+                    return CompletableFuture.completedFuture(NotificationResult.failure(error));
+                }
+            }
+
+            // Mark as successfully sent
+            notificationDomainService.markAsSent(logId);
+            logger.info("Notification processed successfully: logId={}", logId);
+            
+            return CompletableFuture.completedFuture(NotificationResult.success());
+
+        } catch (Exception e) {
+            logger.error("Notification processing failed: logId={}, error={}", logId, e.getMessage(), e);
+            notificationDomainService.markAsFailed(logId, e.getMessage());
+            return CompletableFuture.completedFuture(NotificationResult.failure(e.getMessage()));
         } finally {
             traceService.clearTraceId();
         }

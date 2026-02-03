@@ -2,6 +2,7 @@ package com.vibe.notification.domain.service;
 
 import com.vibe.notification.domain.dto.NotificationLogDTO;
 import com.vibe.notification.domain.model.NotificationRequest;
+import com.vibe.notification.domain.model.NotificationResult;
 import com.vibe.notification.domain.model.NotificationStatus;
 import com.vibe.notification.domain.port.NotificationLogPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -104,5 +105,16 @@ public class NotificationDomainService {
         
         notificationLogPort.save(updatedLog);
         logger.error("Notification marked as failed: logId={}, error={}", logId, errorMessage);
+    }
+
+    /**
+     * Get the final result for a notification by log ID
+     */
+    public NotificationResult getNotificationResult(UUID logId) {
+        var log = notificationLogPort.findById(logId)
+            .orElseThrow(() -> new IllegalArgumentException("Log not found: " + logId));
+        
+        NotificationStatus status = NotificationStatus.fromString(log.getStatus());
+        return new NotificationResult(status, log.getErrorMessage());
     }
 }
