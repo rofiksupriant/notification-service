@@ -94,9 +94,9 @@ class NotificationIntegrationTest extends AbstractPostgresIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         
-        // Then - Verify response
+        // Then - Verify response (status should be ACCEPTED for async mode which is the default)
             .andExpect(status().isAccepted())
-            .andExpect(jsonPath("$.status", equalTo("PENDING")))
+            .andExpect(jsonPath("$.status", equalTo("ACCEPTED")))
             .andReturn();
 
         // Extract trace_id from response
@@ -170,9 +170,9 @@ class NotificationIntegrationTest extends AbstractPostgresIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         
-        // Then - Should succeed (fallback to English)
+        // Then - Should succeed (fallback to English) with ACCEPTED status for async mode
             .andExpect(status().isAccepted())
-            .andExpect(jsonPath("$.status", equalTo("PENDING")))
+            .andExpect(jsonPath("$.status", equalTo("ACCEPTED")))
             .andReturn();
 
         // Verify log was created
