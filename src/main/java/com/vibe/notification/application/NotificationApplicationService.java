@@ -5,8 +5,11 @@ import com.vibe.notification.application.dto.NotificationResponse;
 import com.vibe.notification.application.port.EmailNotificationPort;
 import com.vibe.notification.application.port.WhatsAppNotificationPort;
 import com.vibe.notification.application.port.IdempotencyPort;
+import com.vibe.notification.domain.model.Channel;
 import com.vibe.notification.domain.model.NotificationRequest;
 import com.vibe.notification.domain.model.NotificationResult;
+import com.vibe.notification.domain.model.NotificationStatusEvent;
+import com.vibe.notification.domain.port.NotificationStatusProducer;
 import com.vibe.notification.domain.service.TraceService;
 import com.vibe.notification.domain.service.NotificationDomainService;
 import com.vibe.notification.domain.service.TemplateResolutionService;
@@ -35,6 +38,7 @@ public class NotificationApplicationService {
     private final EmailNotificationPort emailNotificationPort;
     private final WhatsAppNotificationPort whatsAppNotificationPort;
     private final IdempotencyPort idempotencyPort;
+    private final NotificationStatusProducer notificationStatusProducer;
     private final NotificationApplicationService self;
 
     public NotificationApplicationService(
@@ -45,6 +49,7 @@ public class NotificationApplicationService {
         EmailNotificationPort emailNotificationPort,
         WhatsAppNotificationPort whatsAppNotificationPort,
         IdempotencyPort idempotencyPort,
+        NotificationStatusProducer notificationStatusProducer,
         @Lazy NotificationApplicationService self) {
         this.traceService = traceService;
         this.notificationDomainService = notificationDomainService;
@@ -53,6 +58,7 @@ public class NotificationApplicationService {
         this.emailNotificationPort = emailNotificationPort;
         this.whatsAppNotificationPort = whatsAppNotificationPort;
         this.idempotencyPort = idempotencyPort;
+        this.notificationStatusProducer = notificationStatusProducer;
         this.self = self;
     }
 
@@ -240,16 +246,31 @@ public class NotificationApplicationService {
             switch (request.channel()) {
                 case EMAIL -> emailNotificationPort.sendEmail(request.recipient(), template, renderedSubject, renderedContent);
                 case WHATSAPP -> whatsAppNotificationPort.sendWhatsAppMessage(request.recipient(), template, renderedContent);
-                default -> logger.error("Notification processing failed: logId={}, error={}", logId, "Unsupported channel: " + request.channel());
+                default -> {
+                    logger.error("Notification processing failed: logId={}, error={}", logId, "Unsupported channel: " + request.channel());
+                    notificationDomainService.markAsFailed(logId, "Unsupported channel: " + request.channel());
+                    // Publish FAILED status
+                    publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
+                        getTraceIdFromLog(logId), request.channel(), "Unsupported channel: " + request.channel()));
+                    return;
+                }
             }
 
             // Mark as successfully sent
             notificationDomainService.markAsSent(logId);
             logger.info("Notification processed successfully: logId={}", logId);
+            
+            // Publish SUCCESS status
+            publishStatusSafely(logId, request.channel(), NotificationStatusEvent.success(
+                getTraceIdFromLog(logId), request.channel()));
 
         } catch (Exception e) {
             logger.error("Notification processing failed: logId={}, error={}", logId, e.getMessage(), e);
             notificationDomainService.markAsFailed(logId, e.getMessage());
+            
+            // Publish FAILED status
+            publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
+                getTraceIdFromLog(logId), request.channel(), e.getMessage()));
         } finally {
             traceService.clearTraceId();
         }
@@ -278,6 +299,9 @@ public class NotificationApplicationService {
                     String error = "Unsupported channel: " + request.channel();
                     logger.error("Notification processing failed: logId={}, error={}", logId, error);
                     notificationDomainService.markAsFailed(logId, error);
+                    // Publish FAILED status
+                    publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
+                        getTraceIdFromLog(logId), request.channel(), error));
                     return CompletableFuture.completedFuture(NotificationResult.failure(error));
                 }
             }
@@ -286,14 +310,48 @@ public class NotificationApplicationService {
             notificationDomainService.markAsSent(logId);
             logger.info("Notification processed successfully: logId={}", logId);
             
+            // Publish SUCCESS status
+            publishStatusSafely(logId, request.channel(), NotificationStatusEvent.success(
+                getTraceIdFromLog(logId), request.channel()));
+            
             return CompletableFuture.completedFuture(NotificationResult.success());
 
         } catch (Exception e) {
             logger.error("Notification processing failed: logId={}, error={}", logId, e.getMessage(), e);
             notificationDomainService.markAsFailed(logId, e.getMessage());
+            
+            // Publish FAILED status
+            publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
+                getTraceIdFromLog(logId), request.channel(), e.getMessage()));
+            
             return CompletableFuture.completedFuture(NotificationResult.failure(e.getMessage()));
         } finally {
             traceService.clearTraceId();
+        }
+    }
+    
+    /**
+     * Safely publishes status event, catching any exceptions to prevent failures
+     */
+    private void publishStatusSafely(UUID logId, Channel channel, NotificationStatusEvent event) {
+        try {
+            notificationStatusProducer.publishStatus(event);
+        } catch (Exception e) {
+            // Log but don't fail the notification - status publishing is auxiliary
+            logger.warn("Failed to publish status event for logId={}: {}", logId, e.getMessage());
+        }
+    }
+    
+    /**
+     * Retrieves trace ID from notification log
+     */
+    private String getTraceIdFromLog(UUID logId) {
+        try {
+            var log = notificationDomainService.getNotificationLog(logId);
+            return log.getTraceId().toString();
+        } catch (Exception e) {
+            logger.warn("Could not retrieve trace_id for logId={}, using logId as fallback", logId);
+            return logId.toString();
         }
     }
 }
