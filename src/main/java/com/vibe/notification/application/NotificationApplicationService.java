@@ -108,7 +108,7 @@ public class NotificationApplicationService {
         var logEntity = notificationDomainService.createPendingLog(notificationRequest, internalTraceId);
 
         // Execute async processing
-        self.processNotificationAsync(logEntity.getId(), notificationRequest);
+        self.processNotificationAsync(logEntity.getId(), notificationRequest, internalTraceId);
 
         return new NotificationResponse(
             logEntity.getId(),
@@ -166,7 +166,7 @@ public class NotificationApplicationService {
         if (sync) {
             // Synchronous mode: wait for completion
             try {
-                CompletableFuture<NotificationResult> future = self.processNotificationWithResult(logEntity.getId(), notificationRequest);
+                CompletableFuture<NotificationResult> future = self.processNotificationWithResult(logEntity.getId(), notificationRequest, internalTraceId);
                 
                 // Wait for completion with 15-second timeout
                 NotificationResult result = future.get(15, java.util.concurrent.TimeUnit.SECONDS);
@@ -197,7 +197,7 @@ public class NotificationApplicationService {
             }
         } else {
             // Asynchronous mode: return immediately
-            self.processNotificationAsync(logEntity.getId(), notificationRequest);
+            self.processNotificationAsync(logEntity.getId(), notificationRequest, internalTraceId);
             
             return new NotificationResponse(
                 logEntity.getId(),
@@ -231,7 +231,8 @@ public class NotificationApplicationService {
      * Async notification processing with trace_id in MDC
      */
     @Async
-    public void processNotificationAsync(java.util.UUID logId, NotificationRequest request) {
+    public void processNotificationAsync(java.util.UUID logId, NotificationRequest request, UUID traceId) {
+        String traceIdStr = traceId.toString();
         try {
             logger.info("Starting async notification processing: logId={}", logId);
 
@@ -251,7 +252,7 @@ public class NotificationApplicationService {
                     notificationDomainService.markAsFailed(logId, "Unsupported channel: " + request.channel());
                     // Publish FAILED status
                     publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                        getTraceIdFromLog(logId), request.channel(), "Unsupported channel: " + request.channel()));
+                        traceIdStr, request.channel(), "Unsupported channel: " + request.channel()));
                     return;
                 }
             }
@@ -262,7 +263,7 @@ public class NotificationApplicationService {
             
             // Publish SUCCESS status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.success(
-                getTraceIdFromLog(logId), request.channel()));
+                traceIdStr, request.channel()));
 
         } catch (Exception e) {
             logger.error("Notification processing failed: logId={}, error={}", logId, e.getMessage(), e);
@@ -270,7 +271,7 @@ public class NotificationApplicationService {
             
             // Publish FAILED status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                getTraceIdFromLog(logId), request.channel(), e.getMessage()));
+                traceIdStr, request.channel(), e.getMessage()));
         } finally {
             traceService.clearTraceId();
         }
@@ -280,7 +281,8 @@ public class NotificationApplicationService {
      * Async notification processing that returns a CompletableFuture with the result
      */
     @Async
-    public CompletableFuture<NotificationResult> processNotificationWithResult(UUID logId, NotificationRequest request) {
+    public CompletableFuture<NotificationResult> processNotificationWithResult(UUID logId, NotificationRequest request, UUID traceId) {
+        String traceIdStr = traceId.toString();
         try {
             logger.info("Starting async notification processing with result: logId={}", logId);
 
@@ -301,7 +303,7 @@ public class NotificationApplicationService {
                     notificationDomainService.markAsFailed(logId, error);
                     // Publish FAILED status
                     publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                        getTraceIdFromLog(logId), request.channel(), error));
+                        traceIdStr, request.channel(), error));
                     return CompletableFuture.completedFuture(NotificationResult.failure(error));
                 }
             }
@@ -312,7 +314,7 @@ public class NotificationApplicationService {
             
             // Publish SUCCESS status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.success(
-                getTraceIdFromLog(logId), request.channel()));
+                traceIdStr, request.channel()));
             
             return CompletableFuture.completedFuture(NotificationResult.success());
 
@@ -322,7 +324,7 @@ public class NotificationApplicationService {
             
             // Publish FAILED status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                getTraceIdFromLog(logId), request.channel(), e.getMessage()));
+                traceIdStr, request.channel(), e.getMessage()));
             
             return CompletableFuture.completedFuture(NotificationResult.failure(e.getMessage()));
         } finally {
@@ -339,19 +341,6 @@ public class NotificationApplicationService {
         } catch (Exception e) {
             // Log but don't fail the notification - status publishing is auxiliary
             logger.warn("Failed to publish status event for logId={}: {}", logId, e.getMessage());
-        }
-    }
-    
-    /**
-     * Retrieves trace ID from notification log
-     */
-    private String getTraceIdFromLog(UUID logId) {
-        try {
-            var log = notificationDomainService.getNotificationLog(logId);
-            return log.getTraceId().toString();
-        } catch (Exception e) {
-            logger.warn("Could not retrieve trace_id for logId={}, using logId as fallback", logId);
-            return logId.toString();
         }
     }
 }

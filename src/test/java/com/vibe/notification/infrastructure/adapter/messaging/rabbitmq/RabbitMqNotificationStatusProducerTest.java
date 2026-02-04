@@ -74,16 +74,12 @@ class RabbitMqNotificationStatusProducerTest {
         String traceId = "test-trace-id-123";
         NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL);
 
-        // Call the method directly (not async in unit test)
         statusProducer.publishStatus(event);
-        
-        // Wait a bit for async execution
-        Thread.sleep(100);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(rabbitTemplate, timeout(1000).times(1)).send(
-            eq("notification.status.exchange"),
-            eq("status.updated"),
+            eq(RabbitMqConfiguration.NOTIFICATION_STATUS_EXCHANGE),
+            eq(RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY),
             messageCaptor.capture()
         );
 
@@ -103,13 +99,11 @@ class RabbitMqNotificationStatusProducerTest {
         NotificationStatusEvent event = NotificationStatusEvent.failure(traceId, Channel.EMAIL, errorMessage);
 
         statusProducer.publishStatus(event);
-        
-        Thread.sleep(100);
 
         ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(rabbitTemplate, timeout(1000).times(1)).send(
-            eq("notification.status.exchange"),
-            eq("status.updated"),
+            eq(RabbitMqConfiguration.NOTIFICATION_STATUS_EXCHANGE),
+            eq(RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY),
             messageCaptor.capture()
         );
 
@@ -122,17 +116,14 @@ class RabbitMqNotificationStatusProducerTest {
     }
 
     @Test
-    void testPublishStatusDoesNotThrowOnRabbitMQError() throws Exception {
+    void testPublishStatusDoesNotThrowOnRabbitMQError() {
         String traceId = "test-trace-id-error";
         NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL);
         
         doThrow(new RuntimeException("RabbitMQ connection failed"))
             .when(rabbitTemplate).send(anyString(), anyString(), any(Message.class));
 
-        assertDoesNotThrow(() -> {
-            statusProducer.publishStatus(event);
-            Thread.sleep(200);
-        });
+        assertDoesNotThrow(() -> statusProducer.publishStatus(event));
         
         // Verify the call was attempted
         verify(rabbitTemplate, timeout(1000).atLeastOnce()).send(anyString(), anyString(), any(Message.class));

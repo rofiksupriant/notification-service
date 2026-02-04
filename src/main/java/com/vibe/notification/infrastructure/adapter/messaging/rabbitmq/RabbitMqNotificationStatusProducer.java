@@ -33,8 +33,6 @@ import java.nio.charset.StandardCharsets;
 public class RabbitMqNotificationStatusProducer implements NotificationStatusProducer {
     
     private static final Logger logger = LoggerFactory.getLogger(RabbitMqNotificationStatusProducer.class);
-    private static final String STATUS_EXCHANGE = "notification.status.exchange";
-    private static final String STATUS_ROUTING_KEY = "status.updated";
     
     private final RabbitTemplate rabbitTemplate;
     private final Tracer tracer;
@@ -87,7 +85,8 @@ public class RabbitMqNotificationStatusProducer implements NotificationStatusPro
                 Message message = new Message(jsonPayload.getBytes(StandardCharsets.UTF_8), props);
                 
                 // Publish to exchange
-                rabbitTemplate.send(STATUS_EXCHANGE, STATUS_ROUTING_KEY, message);
+                rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_STATUS_EXCHANGE, 
+                                  RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY, message);
                 
                 logger.info("Successfully published notification status: traceId={}, status={}", 
                     event.traceId(), event.status());
