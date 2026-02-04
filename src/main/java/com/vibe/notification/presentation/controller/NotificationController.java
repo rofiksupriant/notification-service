@@ -39,20 +39,25 @@ public class NotificationController {
     @PostMapping("/send")
     @Operation(summary = "Send a notification", 
                description = "Sends a notification (WhatsApp or Email) to the specified recipient with the given template and parameters. " +
-                       "The request is processed asynchronously and returns immediately with a tracking ID. " +
+                       "By default, processes asynchronously and returns 202 Accepted immediately. " +
+                       "Use ?sync=true for synchronous processing (waits max 15s) and returns 200 OK with final provider status. " +
                        "Variable substitution is performed using the provided variables map. " +
                        "Supports optional Idempotency-Key header for idempotent request processing - if provided, ensures the request is processed only once.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "202", description = "Notification accepted for processing - Use the returned notification ID to track status",
+        @ApiResponse(responseCode = "200", description = "Notification processed successfully (sync mode only) - Final provider status (SENT/FAILED) included in response",
+                     content = @Content(schema = @Schema(implementation = NotificationResponse.class))),
+        @ApiResponse(responseCode = "202", description = "Notification accepted for processing (async mode) - Use the returned notification ID to track status",
                      content = @Content(schema = @Schema(implementation = NotificationResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid request body - Missing required fields (recipient, slug, language, channel) or invalid format"),
         @ApiResponse(responseCode = "422", description = "Unprocessable Entity - Template not found, validation failed, or recipient format is invalid")
     })
     public ResponseEntity<NotificationResponse> sendNotification(
         @RequestBody SendNotificationRequest request,
+        @Parameter(name = "sync", description = "If true, waits for notification processing to complete (max 15s) and returns final status. If false (default), returns immediately with ACCEPTED status.")
+        @RequestParam(value = "sync", defaultValue = "false") boolean sync,
         @Parameter(name = "Idempotency-Key", description = "Optional unique identifier for idempotent request processing. If provided, ensures the request is processed only once.")
         @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        logger.info("Received notification request: {}", request.recipient());
+        logger.info("Received notification request (sync={}): {}", sync, request.recipient());
         
         // Create a new request with idempotency key if provided
         SendNotificationRequest enrichedRequest = new SendNotificationRequest(
@@ -64,8 +69,14 @@ public class NotificationController {
             Optional.ofNullable(idempotencyKey)
         );
         
-        var response = notificationApplicationService.sendNotification(enrichedRequest);
-        return ResponseEntity.accepted().body(response);
+        var response = notificationApplicationService.sendNotificationWithSync(enrichedRequest, sync);
+        
+        // Return 200 OK for sync mode, 202 Accepted for async mode
+        if (sync) {
+            return ResponseEntity.ok().body(response);
+        } else {
+            return ResponseEntity.accepted().body(response);
+        }
     }
 
     /**
