@@ -99,7 +99,8 @@ class RetryAndDlqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "welcome-template",
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Act
@@ -133,7 +134,8 @@ class RetryAndDlqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "non-existent-template",  // This will cause failures
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Act
@@ -173,7 +175,8 @@ class RetryAndDlqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "non-existent-template",
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Act
@@ -215,7 +218,8 @@ class RetryAndDlqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "non-existent-template",
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Act

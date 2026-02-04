@@ -14,6 +14,7 @@ import java.util.Map;
  * @param language the ISO 639-1 language code (e.g., "en", "id", "es")
  * @param channel the notification channel (EMAIL or WHATSAPP)
  * @param variables a map of template variables to be interpolated into the template content
+ * @param clientId optional client identifier for routing status callbacks to client-specific queues
  */
 public record NotificationRequestMessage(
     String traceId,
@@ -21,6 +22,7 @@ public record NotificationRequestMessage(
     String slug,
     String language,
     Channel channel,
-    Map<String, Object> variables
+    Map<String, Object> variables,
+    String clientId
 ) {
 }

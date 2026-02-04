@@ -3,14 +3,22 @@ package com.vibe.notification.domain.model;
 import java.util.Map;
 
 /**
- * Notification Request - Java 25 Record for immutable data transfer
+ * Notification Request - Java 21 Record for immutable data transfer
+ * 
+ * @param recipient the notification recipient
+ * @param slug the template identifier
+ * @param language the ISO 639-1 language code
+ * @param channel the notification channel
+ * @param variables template variables for interpolation
+ * @param clientId optional client identifier for routing status callbacks
  */
 public record NotificationRequest(
     String recipient,
     String slug,
     String language,
     Channel channel,
-    Map<String, Object> variables
+    Map<String, Object> variables,
+    String clientId
 ) {
     public NotificationRequest {
         if (recipient == null || recipient.isBlank()) {
@@ -25,5 +33,6 @@ public record NotificationRequest(
         if (language == null || language.isBlank()) {
             throw new IllegalArgumentException("Language cannot be null or blank");
         }
+        // clientId is optional, can be null
     }
 }

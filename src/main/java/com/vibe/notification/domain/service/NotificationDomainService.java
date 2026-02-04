@@ -117,4 +117,12 @@ public class NotificationDomainService {
         NotificationStatus status = NotificationStatus.fromString(log.getStatus());
         return new NotificationResult(status, log.getErrorMessage());
     }
+    
+    /**
+     * Get notification log by ID
+     */
+    public NotificationLogDTO getNotificationLog(UUID logId) {
+        return notificationLogPort.findById(logId)
+            .orElseThrow(() -> new IllegalArgumentException("Log not found: " + logId));
+    }
 }

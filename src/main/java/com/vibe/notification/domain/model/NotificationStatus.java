@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum NotificationStatus {
     PENDING,
     SUCCESS,
-    FAILED;
+    FAILED,
+    RETRY_EXHAUSTED;
 
     @JsonValue
     public String toValue() {
@@ -23,6 +24,7 @@ public enum NotificationStatus {
             case "PENDING" -> PENDING;
             case "SUCCESS" -> SUCCESS;
             case "FAILED" -> FAILED;
+            case "RETRY_EXHAUSTED" -> RETRY_EXHAUSTED;
             default -> throw new IllegalArgumentException("Invalid status: " + value);
         };
     }
