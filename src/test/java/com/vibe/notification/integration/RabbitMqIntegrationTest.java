@@ -85,7 +85,8 @@ class RabbitMqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "welcome-template",
                 "en",
                 Channel.WHATSAPP,
-                variables
+                variables,
+                null
         );
 
         // Act
@@ -133,7 +134,8 @@ class RabbitMqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "welcome-template",
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Act - send the same message twice
@@ -190,7 +192,8 @@ class RabbitMqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                 "welcome-template",
                 "en",
                 null,  // Missing required channel field
-                variables
+                variables,
+                null
         );
 
         // Act - send invalid message
@@ -240,8 +243,9 @@ class RabbitMqIntegrationTest extends AbstractRabbitMqIntegrationTest {
                     "welcome-template",
                     "en",
                     Channel.WHATSAPP,
-                    variables
-            );
+                    variables,
+                null
+        );
 
             // Act
             try {

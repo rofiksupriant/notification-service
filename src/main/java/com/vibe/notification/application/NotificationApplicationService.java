@@ -101,7 +101,8 @@ public class NotificationApplicationService {
             request.slug(),
             request.language(),
             request.channel(),
-            request.variables()
+            request.variables(),
+            request.clientId().orElse(null)
         );
 
         // Create pending log entry with internal trace ID
@@ -157,7 +158,8 @@ public class NotificationApplicationService {
             request.slug(),
             request.language(),
             request.channel(),
-            request.variables()
+            request.variables(),
+            request.clientId().orElse(null)
         );
 
         // Create pending log entry with internal trace ID
@@ -252,7 +254,7 @@ public class NotificationApplicationService {
                     notificationDomainService.markAsFailed(logId, "Unsupported channel: " + request.channel());
                     // Publish FAILED status
                     publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                        traceIdStr, request.channel(), "Unsupported channel: " + request.channel()));
+                        traceIdStr, request.channel(), "Unsupported channel: " + request.channel(), request.clientId()));
                     return;
                 }
             }
@@ -263,7 +265,7 @@ public class NotificationApplicationService {
             
             // Publish SUCCESS status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.success(
-                traceIdStr, request.channel()));
+                traceIdStr, request.channel(), request.clientId()));
 
         } catch (Exception e) {
             logger.error("Notification processing failed: logId={}, error={}", logId, e.getMessage(), e);
@@ -271,7 +273,7 @@ public class NotificationApplicationService {
             
             // Publish FAILED status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                traceIdStr, request.channel(), e.getMessage()));
+                traceIdStr, request.channel(), e.getMessage(), request.clientId()));
         } finally {
             traceService.clearTraceId();
         }
@@ -303,7 +305,7 @@ public class NotificationApplicationService {
                     notificationDomainService.markAsFailed(logId, error);
                     // Publish FAILED status
                     publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                        traceIdStr, request.channel(), error));
+                        traceIdStr, request.channel(), error, request.clientId()));
                     return CompletableFuture.completedFuture(NotificationResult.failure(error));
                 }
             }
@@ -314,7 +316,7 @@ public class NotificationApplicationService {
             
             // Publish SUCCESS status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.success(
-                traceIdStr, request.channel()));
+                traceIdStr, request.channel(), request.clientId()));
             
             return CompletableFuture.completedFuture(NotificationResult.success());
 
@@ -324,7 +326,7 @@ public class NotificationApplicationService {
             
             // Publish FAILED status
             publishStatusSafely(logId, request.channel(), NotificationStatusEvent.failure(
-                traceIdStr, request.channel(), e.getMessage()));
+                traceIdStr, request.channel(), e.getMessage(), request.clientId()));
             
             return CompletableFuture.completedFuture(NotificationResult.failure(e.getMessage()));
         } finally {

@@ -89,7 +89,8 @@ class NotificationStatusCallbackIntegrationTest extends AbstractRabbitMqIntegrat
                 "test-template",
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Set up a listener on the status exchange to capture the status event
@@ -158,7 +159,8 @@ class NotificationStatusCallbackIntegrationTest extends AbstractRabbitMqIntegrat
                 "non-existent-template",  // This will trigger template not found exception
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Set up a listener on the status exchange to capture the status event
@@ -232,7 +234,8 @@ class NotificationStatusCallbackIntegrationTest extends AbstractRabbitMqIntegrat
                 "test-template",
                 "en",
                 Channel.EMAIL,
-                variables
+                variables,
+                null
         );
 
         // Set up a listener on the status exchange

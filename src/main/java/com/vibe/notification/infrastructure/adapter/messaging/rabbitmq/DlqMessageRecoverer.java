@@ -68,7 +68,8 @@ public class DlqMessageRecoverer implements MessageRecoverer {
             NotificationStatusEvent event = NotificationStatusEvent.retryExhausted(
                 requestMessage.traceId(),
                 requestMessage.channel(),
-                errorMessage
+                errorMessage,
+                requestMessage.clientId()
             );
             
             notificationStatusProducer.publishStatus(event);

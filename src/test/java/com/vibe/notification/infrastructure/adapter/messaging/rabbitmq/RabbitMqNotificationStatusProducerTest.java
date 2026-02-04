@@ -72,7 +72,7 @@ class RabbitMqNotificationStatusProducerTest {
     @Test
     void testPublishSuccessStatus() throws Exception {
         String traceId = "test-trace-id-123";
-        NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL);
+        NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL, null);
 
         statusProducer.publishStatus(event);
 
@@ -90,13 +90,14 @@ class RabbitMqNotificationStatusProducerTest {
         assertTrue(jsonPayload.contains("\"status\":\"SUCCESS\""));
         assertTrue(jsonPayload.contains("\"channel\":\"EMAIL\""));
         assertTrue(jsonPayload.contains("\"error_message\":null"));
+        assertTrue(jsonPayload.contains("\"client_id\":null"));
     }
 
     @Test
     void testPublishFailedStatus() throws Exception {
         String traceId = "test-trace-id-456";
         String errorMessage = "SMTP connection failed";
-        NotificationStatusEvent event = NotificationStatusEvent.failure(traceId, Channel.EMAIL, errorMessage);
+        NotificationStatusEvent event = NotificationStatusEvent.failure(traceId, Channel.EMAIL, errorMessage, null);
 
         statusProducer.publishStatus(event);
 
@@ -118,7 +119,7 @@ class RabbitMqNotificationStatusProducerTest {
     @Test
     void testPublishStatusDoesNotThrowOnRabbitMQError() {
         String traceId = "test-trace-id-error";
-        NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL);
+        NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL, null);
         
         doThrow(new RuntimeException("RabbitMQ connection failed"))
             .when(rabbitTemplate).send(anyString(), anyString(), any(Message.class));
@@ -127,5 +128,35 @@ class RabbitMqNotificationStatusProducerTest {
         
         // Verify the call was attempted
         verify(rabbitTemplate, timeout(1000).atLeastOnce()).send(anyString(), anyString(), any(Message.class));
+    }
+    
+    @Test
+    void testPublishStatusWithClientId() throws Exception {
+        String traceId = "test-trace-id-789";
+        String clientId = "client-abc-123";
+        NotificationStatusEvent event = NotificationStatusEvent.success(traceId, Channel.EMAIL, clientId);
+
+        statusProducer.publishStatus(event);
+
+        ArgumentCaptor<String> routingKeyCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(rabbitTemplate, timeout(1000).times(1)).send(
+            eq(RabbitMqConfiguration.NOTIFICATION_STATUS_EXCHANGE),
+            routingKeyCaptor.capture(),
+            messageCaptor.capture()
+        );
+
+        // Verify routing key includes client_id
+        String capturedRoutingKey = routingKeyCaptor.getValue();
+        assertEquals(RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY + "." + clientId, capturedRoutingKey);
+
+        // Verify JSON payload includes client_id
+        Message capturedMessage = messageCaptor.getValue();
+        String jsonPayload = new String(capturedMessage.getBody(), "UTF-8");
+        assertTrue(jsonPayload.contains("\"client_id\":\"" + clientId + "\""));
+        
+        // Verify headers include client_id
+        Object clientIdHeader = capturedMessage.getMessageProperties().getHeader("client_id");
+        assertEquals(clientId, clientIdHeader);
     }
 }

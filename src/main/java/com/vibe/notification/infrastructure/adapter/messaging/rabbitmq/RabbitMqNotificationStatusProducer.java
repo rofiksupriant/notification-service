@@ -82,11 +82,19 @@ public class RabbitMqNotificationStatusProducer implements NotificationStatusPro
                 // Also add trace_id as a custom header for easy access
                 props.setHeader("trace_id", event.traceId());
                 
+                // Add client_id header if present
+                if (event.clientId() != null && !event.clientId().isBlank()) {
+                    props.setHeader("client_id", event.clientId());
+                }
+                
                 Message message = new Message(jsonPayload.getBytes(StandardCharsets.UTF_8), props);
+                
+                // Build routing key with client_id if present
+                String routingKey = buildRoutingKey(event.clientId());
                 
                 // Publish to exchange
                 rabbitTemplate.send(RabbitMqConfiguration.NOTIFICATION_STATUS_EXCHANGE, 
-                                  RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY, message);
+                                  routingKey, message);
                 
                 logger.info("Successfully published notification status: traceId={}, status={}", 
                     event.traceId(), event.status());
@@ -118,10 +126,27 @@ public class RabbitMqNotificationStatusProducer implements NotificationStatusPro
             json.append("\"error_message\":null,");
         }
         
+        if (event.clientId() != null && !event.clientId().isBlank()) {
+            json.append("\"client_id\":\"").append(escapeJson(event.clientId())).append("\",");
+        } else {
+            json.append("\"client_id\":null,");
+        }
+        
         json.append("\"timestamp\":\"").append(event.timestamp().toString()).append("\"");
         json.append("}");
         
         return json.toString();
+    }
+    
+    /**
+     * Builds routing key with client_id if present.
+     * Format: status.updated.{clientId} or status.updated if no clientId
+     */
+    private String buildRoutingKey(String clientId) {
+        if (clientId != null && !clientId.isBlank()) {
+            return RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY + "." + clientId;
+        }
+        return RabbitMqConfiguration.NOTIFICATION_STATUS_ROUTING_KEY;
     }
     
     /**

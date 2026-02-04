@@ -11,50 +11,55 @@ import java.time.LocalDateTime;
  * @param channel The channel used (EMAIL/WHATSAPP)
  * @param errorMessage Root cause of failure (null if success)
  * @param timestamp Event occurrence time
+ * @param clientId Optional client identifier for routing to client-specific queues
  */
 public record NotificationStatusEvent(
     String traceId,
     NotificationStatus status,
     Channel channel,
     String errorMessage,
-    LocalDateTime timestamp
+    LocalDateTime timestamp,
+    String clientId
 ) {
     /**
      * Create a success event
      */
-    public static NotificationStatusEvent success(String traceId, Channel channel) {
+    public static NotificationStatusEvent success(String traceId, Channel channel, String clientId) {
         return new NotificationStatusEvent(
             traceId,
             NotificationStatus.SUCCESS,
             channel,
             null,
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            clientId
         );
     }
     
     /**
      * Create a failed event with error message
      */
-    public static NotificationStatusEvent failure(String traceId, Channel channel, String errorMessage) {
+    public static NotificationStatusEvent failure(String traceId, Channel channel, String errorMessage, String clientId) {
         return new NotificationStatusEvent(
             traceId,
             NotificationStatus.FAILED,
             channel,
             errorMessage,
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            clientId
         );
     }
     
     /**
      * Create a retry exhausted event with error message
      */
-    public static NotificationStatusEvent retryExhausted(String traceId, Channel channel, String errorMessage) {
+    public static NotificationStatusEvent retryExhausted(String traceId, Channel channel, String errorMessage, String clientId) {
         return new NotificationStatusEvent(
             traceId,
             NotificationStatus.RETRY_EXHAUSTED,
             channel,
             errorMessage,
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            clientId
         );
     }
 }
