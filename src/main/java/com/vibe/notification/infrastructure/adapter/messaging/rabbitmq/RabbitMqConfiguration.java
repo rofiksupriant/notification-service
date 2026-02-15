@@ -1,5 +1,6 @@
 package com.vibe.notification.infrastructure.adapter.messaging.rabbitmq;
 
+import com.vibe.notification.domain.port.NotificationStatusProducer;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -39,6 +40,8 @@ public class RabbitMqConfiguration {
 
     public static final String NOTIFICATION_REQUEST = "notification.request";
     public static final String NOTIFICATION_DL = "notification.dl";
+    public static final String NOTIFICATION_STATUS_EXCHANGE = "notification.status.exchange";
+    public static final String NOTIFICATION_STATUS_ROUTING_KEY = "status.updated";
 
     /**
      * Creates RabbitAdmin for managing RabbitMQ resources.
@@ -125,6 +128,18 @@ public class RabbitMqConfiguration {
     }
 
     /**
+     * Declares the Notification Status Exchange.
+     * Status events (SUCCESS/FAILED/RETRY_EXHAUSTED) are published here.
+     * Topic exchange allows flexible routing patterns.
+     *
+     * @return the notification status exchange bean
+     */
+    @Bean
+    public TopicExchange notificationStatusExchange() {
+        return new TopicExchange(NOTIFICATION_STATUS_EXCHANGE, true, false);
+    }
+
+    /**
      * Configures the message converter for JSON deserialization.
      * Enables automatic conversion of JSON messages to Java objects (records).
      *
@@ -146,14 +161,16 @@ public class RabbitMqConfiguration {
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
             MessageConverter messageConverter,
-            RabbitTemplate rabbitTemplate) {
+            RabbitTemplate rabbitTemplate,
+            NotificationStatusProducer notificationStatusProducer,
+            ObjectMapper objectMapper) {
 
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
 
         // Configure retry interceptor
-        factory.setAdviceChain(retryInterceptor(rabbitTemplate));
+        factory.setAdviceChain(retryInterceptor(rabbitTemplate, notificationStatusProducer, objectMapper));
 
         return factory;
     }
@@ -163,7 +180,10 @@ public class RabbitMqConfiguration {
      *
      * @return the configured retry interceptor
      */
-    private org.aopalliance.intercept.MethodInterceptor retryInterceptor(RabbitTemplate rabbitTemplate) {
+    private org.aopalliance.intercept.MethodInterceptor retryInterceptor(
+            RabbitTemplate rabbitTemplate,
+            NotificationStatusProducer notificationStatusProducer,
+            ObjectMapper objectMapper) {
         RetryTemplate retryTemplate = new RetryTemplate();
 
         // Exponential backoff: 1s, 2s, 4s
@@ -183,12 +203,14 @@ public class RabbitMqConfiguration {
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(4, retryableExceptions);
         retryTemplate.setRetryPolicy(retryPolicy);
 
-        // Custom message recoverer that adds error headers to DLQ messages
+        // Custom message recoverer that adds error headers to DLQ messages and publishes RETRY_EXHAUSTED status
         DlqMessageRecoverer messageRecoverer = new DlqMessageRecoverer(
                 rabbitTemplate,
                 NOTIFICATION_DL,
                 NOTIFICATION_DL,
-                NOTIFICATION_REQUEST);
+                NOTIFICATION_REQUEST,
+                notificationStatusProducer,
+                objectMapper);
 
         return org.springframework.amqp.rabbit.config.RetryInterceptorBuilder
                 .stateless()

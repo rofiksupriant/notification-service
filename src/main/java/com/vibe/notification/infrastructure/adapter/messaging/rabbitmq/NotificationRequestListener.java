@@ -97,7 +97,8 @@ public class NotificationRequestListener {
             message.language(),
             message.channel(),
             message.variables(),
-            java.util.Optional.of(message.traceId())
+            java.util.Optional.of(message.traceId()),
+            java.util.Optional.ofNullable(message.clientId())
         );
 
         // Send notification asynchronously
